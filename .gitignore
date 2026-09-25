@@ -1,0 +1,3 @@
+# Borradores de Gemini y configuración local de Claude (no son parte de la app)
+gemini-code-*
+.claude/
