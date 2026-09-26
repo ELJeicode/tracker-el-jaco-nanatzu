@@ -1,6 +1,6 @@
 // Service worker: permite instalar la app y usarla sin internet.
 // Sube CACHE cuando cambies archivos para forzar la actualización en el celular.
-const CACHE = 'nanatsu-v1';
+const CACHE = 'nanatsu-v2';
 const APP = ['./', './index.html', './niveles.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -30,12 +30,6 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // Imágenes de la wiki y fuentes: se guardan la primera vez y luego cargan al instante.
-    e.respondWith(
-        caches.match(req).then(hit => hit || fetch(req).then(res => {
-            const copy = res.clone();
-            caches.open(CACHE).then(c => c.put(req, copy));
-            return res;
-        }))
-    );
+    // Imágenes de la wiki y fuentes: no se interceptan. Sus respuestas son opacas (no se puede saber
+    // si fallaron), y guardarlas podía dejar una imagen "rota" en caché para siempre.
 });
