@@ -11,7 +11,7 @@ const ERAS = [
     { id: 4, name: 'Los Diez Mandamientos',        color: '#c084fc', from: 17, to: 22 },
     { id: 5, name: 'Evolución de Élite',           color: '#fb7185', from: 23, to: 28 },
     { id: 6, name: 'Pico Guerrero · Guerra Santa', color: '#fb923c', from: 29, to: 34 },
-    { id: 7, name: 'Rango Dios · El Origen',       color: '#e0e7ff', from: 35, to: 38 }
+    { id: 7, name: 'Rango Dios · El Origen',       color: '#e0e7ff', from: 35, to: 40 }
 ];
 
 // pos = object-position del retrato (para que la cara quede en el marco).
@@ -64,10 +64,12 @@ const SIN_LEVELS = [
     { level: 34, name: 'Escanor', title: '"The One Ultimate"', reqXP: 98600, img: wiki('7/71/Escanor_%22Ultimate_Mode%22_Anime.png', 547), pos: 'center 6%', desc: 'Fuego vital entregado a la meta. Disciplina innegociable en la fase final.' },
 
     // VII. RANGO DIOS & EL ORIGEN
-    { level: 35, name: 'La Deidad Suprema', title: 'Luz Absoluta', reqXP: 99000, img: wiki('7/72/Supreme_Deity_Anime.png', 700), pos: 'center 15%', desc: 'Luz absoluta y dominio de las reglas del universo.' },
-    { level: 36, name: 'El Rey Demonio', title: 'Cuerpo Original', reqXP: 99500, img: wiki('c/c7/Demon_King_anime_full_appearance.png', 700), pos: 'center 15%', desc: 'Soberanía total sobre la materia, las finanzas y el entorno.' },
-    { level: 37, name: 'Meliodas', title: 'Forma Rey Demonio', reqXP: 99800, img: wiki('3/38/Meliodas_%22Demon_King%22_Anime.png', 602), pos: 'center 6%', desc: 'El poder capaz de destruir las maldiciones eternas. Control absoluto de tu destino.' },
-    { level: 38, name: 'Rey Arturo', title: 'El Caos Primordial', reqXP: 100000, img: wiki('3/3f/Arthur_%22Chaos_Eyes%22_Anime.png', 1000), pos: 'center 30%', desc: 'MENTE INQUEBRANTABLE ABSOLUTA. 2 años de disciplina. Has creado tu propio universo.' }
+    { level: 35, name: 'Mael', title: 'Arcángel · Cuatro Mandamientos', reqXP: 98800, img: wiki('5/5d/Mael_Four_Commandments_Form.png', 1000), pos: '52% center', desc: 'Luz y oscuridad en un solo cuerpo. Ninguna tentación ni distracción alcanza tu rostro: solo queda el propósito.' },
+    { level: 36, name: 'El Demonio Original', title: 'La Oscuridad Primigenia', reqXP: 99100, img: wiki('8/8a/Original_Demon_Anime.png', 800), pos: 'center 30%', desc: 'Nacido del poder puro del Clan Demonio. Fuerza bruta sin límites al servicio de tu disciplina.' },
+    { level: 37, name: 'La Deidad Suprema', title: 'Luz Absoluta', reqXP: 99400, img: wiki('7/72/Supreme_Deity_Anime.png', 700), pos: 'center 15%', desc: 'Luz absoluta y dominio de las reglas del universo.' },
+    { level: 38, name: 'El Rey Demonio', title: 'Cuerpo Original', reqXP: 99600, img: wiki('c/c7/Demon_King_anime_full_appearance.png', 700), pos: 'center 15%', desc: 'Soberanía total sobre la materia, las finanzas y el entorno.' },
+    { level: 39, name: 'Meliodas', title: 'Forma Rey Demonio', reqXP: 99800, img: wiki('3/38/Meliodas_%22Demon_King%22_Anime.png', 602), pos: 'center 6%', desc: 'El poder capaz de destruir las maldiciones eternas. Control absoluto de tu destino.' },
+    { level: 40, name: 'Rey Arturo', title: 'El Caos Primordial', reqXP: 100000, img: wiki('3/3f/Arthur_%22Chaos_Eyes%22_Anime.png', 1000), pos: 'center 30%', desc: 'MENTE INQUEBRANTABLE ABSOLUTA. 2 años de disciplina. Has creado tu propio universo.' }
 ];
 
 // Escenarios de Britannia usados como fondo de cada pestaña.
