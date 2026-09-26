@@ -800,7 +800,7 @@
             <div class="section-head">
                 <div>
                     <h2 class="section-title">El Camino del Poder</h2>
-                    <p class="section-sub">33 rangos, 7 eras, 100.000 XP. De aprendiz de caballero al Caos Primordial.</p>
+                    <p class="section-sub">38 rangos, 7 eras, 100.000 XP. De aprendiz de caballero al Caos Primordial.</p>
                 </div>
             </div>
             <div id="path-list"></div>
@@ -946,6 +946,7 @@
             wrap.classList.remove('broken');
             img.onerror = () => wrap.classList.add('broken');
             img.style.objectPosition = lvl.pos || 'center 15%';
+            img.style.objectViewBox = lvl.box || '';
             if (img.getAttribute('src') !== lvl.img) img.src = lvl.img;
             const fb = wrap.querySelector('.img-fallback');
             if (fb && fb.textContent !== '?') fb.textContent = initials(lvl);
@@ -1530,7 +1531,7 @@
                     </div>
                     <div class="lv-grid">${lvls.map(l => `
                         <div class="lv ${l.level === cur.level ? 'current' : l.level > cur.level ? 'locked' : ''}">
-                            <img src="${l.img}" alt="${esc(l.name)}" loading="lazy" style="object-position:${l.pos || 'center 15%'}" onerror="this.parentElement.classList.add('broken')">
+                            <img src="${l.img}" alt="${esc(l.name)}" loading="lazy" style="object-position:${l.pos || 'center 15%'};${l.box ? `object-view-box:${l.box}` : ''}" onerror="this.parentElement.classList.add('broken')">
                             <div class="img-fallback">${initials(l)}</div>
                             <div class="lv-cap">
                                 <div class="lv-n">RANGO ${l.level}</div>

@@ -1,7 +1,7 @@
 # Mente Inquebrantable — Nanatsu Edition
 
 Tracker personal de hábitos, peso y finanzas ambientado en *Nanatsu no Taizai*.
-33 rangos de poder, de Twigo al Caos Primordial.
+38 rangos de poder, de Twigo al Caos Primordial.
 
 ## Uso
 - **Web / celular:** abrir el link de GitHub Pages e instalar desde el navegador
@@ -13,7 +13,7 @@ Para pasarlos de un dispositivo a otro: *Exportar respaldo* → *Importar respal
 
 ## Archivos
 - `index.html` — la app completa
-- `niveles.js` — los 33 rangos, eras y escenarios
+- `niveles.js` — los 38 rangos, eras y escenarios
 - `manifest.webmanifest`, `sw.js`, `icons/` — instalación en celular y modo sin internet
 
 Al publicar cambios, subir la versión de `CACHE` en `sw.js` para que el celular se actualice.

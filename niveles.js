@@ -8,13 +8,14 @@ const ERAS = [
     { id: 1, name: 'Caballeros Sagrados',          color: '#7dd3fc', from: 1,  to: 6  },
     { id: 2, name: 'Pecados Capitales · Forma Base', color: '#f87171', from: 7,  to: 11 },
     { id: 3, name: 'Tesoros Sagrados',             color: '#fbbf24', from: 12, to: 16 },
-    { id: 4, name: 'Los Diez Mandamientos',        color: '#c084fc', from: 17, to: 20 },
-    { id: 5, name: 'Evolución de Élite',           color: '#fb7185', from: 21, to: 25 },
-    { id: 6, name: 'Pico Guerrero · Guerra Santa', color: '#fb923c', from: 26, to: 29 },
-    { id: 7, name: 'Rango Dios · El Origen',       color: '#e0e7ff', from: 30, to: 33 }
+    { id: 4, name: 'Los Diez Mandamientos',        color: '#c084fc', from: 17, to: 22 },
+    { id: 5, name: 'Evolución de Élite',           color: '#fb7185', from: 23, to: 28 },
+    { id: 6, name: 'Pico Guerrero · Guerra Santa', color: '#fb923c', from: 29, to: 34 },
+    { id: 7, name: 'Rango Dios · El Origen',       color: '#e0e7ff', from: 35, to: 38 }
 ];
 
 // pos = object-position del retrato (para que la cara quede en el marco).
+// box = recorte opcional (object-view-box), p. ej. para quitar el título de un póster.
 const SIN_LEVELS = [
     // I. CABALLEROS SAGRADOS
     { level: 1,  name: 'Twigo', title: 'Aprendiz de Caballero', reqXP: 0,     img: wiki('9/92/Twigo_Anime.png', 500), pos: 'center 20%', desc: 'Inicio del camino. Superas la inercia diaria y empiezas a construir disciplina.' },
@@ -33,35 +34,40 @@ const SIN_LEVELS = [
 
     // III. TESOROS SAGRADOS
     { level: 12, name: 'Diane', title: 'Tesoro Sagrado Gideon', reqXP: 48000, img: wiki('c/c4/Diane_Gideon_Anime.png', 468), pos: 'center 20%', desc: 'Conexión total con la tierra. Estabilidad mental sólida frente a cualquier reto.' },
-    { level: 13, name: 'Meliodas', title: 'Tesoro Sagrado Lostvayne', reqXP: 53000, img: wiki('e/e1/Meliodas_anime_full_appearance_2.png', 366), pos: 'center 12%', desc: 'Clonación física y mental. Multiplicas tu productividad en proyectos personales.' },
+    { level: 13, name: 'Meliodas', title: 'Tesoro Sagrado Lostvayne', reqXP: 53000, img: wiki('5/5c/Meliodas_considering_to_sell_Lostvayne.png', 900), pos: '62% center', desc: 'Clonación física y mental. Multiplicas tu productividad en proyectos personales.' },
     { level: 14, name: 'Gowther', title: 'Tesoro Sagrado Herritt', reqXP: 57000, img: wiki('3/38/Gowther_using_Herritt.png', 900), pos: '72% center', desc: 'Reescribiendo la mente. Memoria y retención absoluta durante tus sesiones de estudio.' },
     { level: 15, name: 'Ban', title: 'Tesoro Sagrado Courechouse', reqXP: 61000, img: wiki('3/32/Ban_Anime_Season_3_Design.png', 600), pos: 'center 22%', desc: 'Alcance y precisión extendida. Control estricto de gastos y hábitos impecables.' },
     { level: 16, name: 'Merlin', title: 'Tesoro Sagrado Aldan', reqXP: 65000, img: wiki('3/3c/Merlin_full_appearance_Anime.png', 275), pos: 'center 6%', desc: 'Magia Infinita. 1 AÑO CUMPLIDO. Capacidad inagotable para aprender física y matemáticas.' },
 
     // IV. LOS DIEZ MANDAMIENTOS
-    { level: 17, name: 'Galand', title: 'Mandamiento de la Verdad', reqXP: 69000, img: wiki('5/5f/Galand_%28Anime%29.png', 600), pos: 'center 15%', desc: 'Cero mentiras personales. Cumples tus compromisos diarios sin excusas.' },
-    { level: 18, name: 'Melascula', title: 'Mandamiento de la Fe', reqXP: 73000, img: wiki('7/74/Melascula_Anime.png', 600), pos: 'center 15%', desc: 'Fe inquebrantable en tu proceso a largo plazo, sin importar la fatiga.' },
-    { level: 19, name: 'Gloxinia', title: 'Mandamiento del Reposo', reqXP: 77000, img: wiki('f/fa/Gloxinia_Anime_Infobox.png', 600), pos: 'center 15%', desc: 'Dominio de la regeneración y el descanso activo mediante técnicas de respiración.' },
-    { level: 20, name: 'Drole', title: 'Mandamiento de la Paciencia', reqXP: 81000, img: wiki('1/13/Drole_anime.png', 600), pos: 'center 15%', desc: 'Paciencia inamovible. Construyendo resultados físicos y académicos piedra a piedra.' },
+    { level: 17, name: 'Fraudrin', title: 'Mandamiento del Altruismo', reqXP: 69000, img: wiki('5/58/Fraudrin_anime.png', 644), pos: 'center 30%', desc: 'Dejas de sacrificar tu rutina por complacer a otros. Primero tu disciplina, después ayudas.' },
+    { level: 18, name: 'Grayroad', title: 'Mandamiento del Pacifismo', reqXP: 71500, img: wiki('6/67/Grayroad_Intro_Anime.png', 700), pos: 'center', desc: 'Ninguna discusión ni provocación te saca de tu plan del día. Paz que protege tu enfoque.' },
+    { level: 19, name: 'Galand', title: 'Mandamiento de la Verdad', reqXP: 74000, img: wiki('5/5f/Galand_%28Anime%29.png', 600), pos: 'center 15%', desc: 'Cero mentiras personales. Cumples tus compromisos diarios sin excusas.' },
+    { level: 20, name: 'Melascula', title: 'Mandamiento de la Fe', reqXP: 76500, img: wiki('7/74/Melascula_Anime.png', 600), pos: 'center 15%', desc: 'Fe inquebrantable en tu proceso a largo plazo, sin importar la fatiga.' },
+    { level: 21, name: 'Gloxinia', title: 'Mandamiento del Reposo', reqXP: 79000, img: wiki('f/fa/Gloxinia_Anime_Infobox.png', 600), pos: 'center 15%', desc: 'Dominio de la regeneración y el descanso activo mediante técnicas de respiración.' },
+    { level: 22, name: 'Drole', title: 'Mandamiento de la Paciencia', reqXP: 81500, img: wiki('1/13/Drole_anime.png', 600), pos: 'center 15%', desc: 'Paciencia inamovible. Construyendo resultados físicos y académicos piedra a piedra.' },
 
     // V. EVOLUCIÓN DE ÉLITE
-    { level: 21, name: 'Meliodas', title: 'Marca Demoníaca Recuperada', reqXP: 84000, img: wiki('b/b8/Meliodas_Demon_Mark_Anime.png', 600), pos: 'center 25%', desc: 'Acceso a reservas profundas de energía. Concentración absoluta bajo alta carga laboral.' },
-    { level: 22, name: 'Derieri', title: 'Mandamiento de la Pureza', reqXP: 87000, img: wiki('f/fd/Derieri_Anime.png', 700), pos: 'center 20%', desc: 'Combo Star. Cada día consecutivo de racha multiplica la fuerza de tu ejecución.' },
-    { level: 23, name: 'Monspeet', title: 'Mandamiento de la Reticencia', reqXP: 89500, img: wiki('4/4a/Monspeet_Anime.png', 700), pos: 'center 20%', desc: 'Estrategia silenciosa y precisión en tus decisiones financieras y personales.' },
-    { level: 24, name: 'Zeldris', title: 'El Ejecutor', reqXP: 92000, img: wiki('b/b7/Zeldris_Anime.png', 360), pos: 'center 20%', desc: 'Autoridad del Rey Demonio. Cero espacio para la procrastinación.' },
-    { level: 25, name: 'Meliodas', title: 'Modo Asalto', reqXP: 94000, img: wiki('1/18/Meliodas_Assault_Mode_Anime.png', 600), pos: 'center 8%', desc: 'Modo de enfoque frío y calculador. Eliminación total de interferencias emocionales.' },
+    { level: 23, name: 'Meliodas', title: 'Marca Demoníaca Recuperada', reqXP: 84000, img: wiki('b/b8/Meliodas_Demon_Mark_Anime.png', 600), pos: 'center 25%', desc: 'Acceso a reservas profundas de energía. Concentración absoluta bajo alta carga laboral.' },
+    { level: 24, name: 'Derieri', title: 'Mandamiento de la Pureza', reqXP: 86000, img: wiki('f/fd/Derieri_Anime.png', 700), pos: 'center 20%', desc: 'Combo Star. Cada día consecutivo de racha multiplica la fuerza de tu ejecución.' },
+    { level: 25, name: 'Monspeet', title: 'Mandamiento de la Reticencia', reqXP: 88000, img: wiki('4/4a/Monspeet_Anime.png', 700), pos: 'center 20%', desc: 'Estrategia silenciosa y precisión en tus decisiones financieras y personales.' },
+    { level: 26, name: 'Estarossa', title: 'Mandamiento del Amor', reqXP: 90000, img: wiki('f/f1/Estarossa_anime.png', 700), pos: 'center 15%', desc: 'Amor propio: te tratas con respeto, cuerpo y mente. Cero autosabotaje.' },
+    { level: 27, name: 'Zeldris', title: 'El Ejecutor', reqXP: 92000, img: wiki('b/b7/Zeldris_Anime.png', 360), pos: 'center 20%', desc: 'Autoridad del Rey Demonio. Cero espacio para la procrastinación.' },
+    { level: 28, name: 'Meliodas', title: 'Modo Asalto', reqXP: 94000, img: wiki('1/18/Meliodas_Assault_Mode_Anime.png', 600), pos: 'center 8%', desc: 'Modo de enfoque frío y calculador. Eliminación total de interferencias emocionales.' },
 
     // VI. PICO GUERRERO & GUERRA SANTA
-    { level: 26, name: 'Escanor', title: '"The One" · El Minuto Dorado', reqXP: 95500, img: wiki('7/79/Escanor_%22One_Mode%22_Anime.png', 600), pos: 'center 8%', desc: 'El pico del rendimiento físico. Invencibilidad en tus rutinas de calistenia.' },
-    { level: 27, name: 'Ban', title: 'Del Purgatorio', reqXP: 96500, img: wiki('c/ca/Ban%27s_outfit_in_Purgatory.png', 389), pos: 'center 4%', desc: 'Cuerpo adaptable a cualquier condición extrema de entrenamiento y trabajo.' },
-    { level: 28, name: 'Elizabeth', title: 'Modo Diosa', reqXP: 97500, img: wiki('b/b4/Goddess_Elizabeth_anime_full_appearance.png', 700), pos: 'center 10%', desc: 'Poder divino despertado. Purificación de hábitos y serenidad espiritual absoluta.' },
-    { level: 29, name: 'Escanor', title: '"The One Ultimate"', reqXP: 98300, img: wiki('7/71/Escanor_%22Ultimate_Mode%22_Anime.png', 547), pos: 'center 6%', desc: 'Fuego vital entregado a la meta. Disciplina innegociable en la fase final.' },
+    { level: 29, name: 'King', title: 'Rey Hada · Despertar', reqXP: 94800, img: wiki('5/54/King_Full_Wings_close-up.png', 600), pos: 'center 15%', desc: 'Alas completas: la pereza vencida para siempre. Descanso y acción en equilibrio perfecto.' },
+    { level: 30, name: 'Diane', title: 'Reina de los Gigantes', reqXP: 95600, img: wiki('5/58/Diane_%28Cursed_by_Light%29.png', 700), pos: 'center 30%', box: 'inset(19% 14% 0 2%)', desc: 'Lideras tu vida con fuerza y serenidad. Tu cuerpo alcanza su forma plena.' },
+    { level: 31, name: 'Escanor', title: '"The One" · El Minuto Dorado', reqXP: 96400, img: wiki('7/79/Escanor_%22One_Mode%22_Anime.png', 600), pos: 'center 8%', desc: 'El pico del rendimiento físico. Invencibilidad en tus rutinas de calistenia.' },
+    { level: 32, name: 'Ban', title: 'Del Purgatorio', reqXP: 97200, img: wiki('c/ca/Ban%27s_outfit_in_Purgatory.png', 389), pos: 'center 4%', desc: 'Cuerpo adaptable a cualquier condición extrema de entrenamiento y trabajo.' },
+    { level: 33, name: 'Elizabeth', title: 'Modo Diosa', reqXP: 98000, img: wiki('b/b4/Goddess_Elizabeth_anime_full_appearance.png', 700), pos: 'center 10%', desc: 'Poder divino despertado. Purificación de hábitos y serenidad espiritual absoluta.' },
+    { level: 34, name: 'Escanor', title: '"The One Ultimate"', reqXP: 98600, img: wiki('7/71/Escanor_%22Ultimate_Mode%22_Anime.png', 547), pos: 'center 6%', desc: 'Fuego vital entregado a la meta. Disciplina innegociable en la fase final.' },
 
     // VII. RANGO DIOS & EL ORIGEN
-    { level: 30, name: 'La Deidad Suprema', title: 'Luz Absoluta', reqXP: 99000, img: wiki('7/72/Supreme_Deity_Anime.png', 700), pos: 'center 15%', desc: 'Luz absoluta y dominio de las reglas del universo.' },
-    { level: 31, name: 'El Rey Demonio', title: 'Cuerpo Original', reqXP: 99500, img: wiki('c/c7/Demon_King_anime_full_appearance.png', 700), pos: 'center 15%', desc: 'Soberanía total sobre la materia, las finanzas y el entorno.' },
-    { level: 32, name: 'Meliodas', title: 'Forma Rey Demonio', reqXP: 99800, img: wiki('3/38/Meliodas_%22Demon_King%22_Anime.png', 602), pos: 'center 6%', desc: 'El poder capaz de destruir las maldiciones eternas. Control absoluto de tu destino.' },
-    { level: 33, name: 'Rey Arturo', title: 'El Caos Primordial', reqXP: 100000, img: wiki('3/3f/Arthur_%22Chaos_Eyes%22_Anime.png', 1000), pos: 'center 30%', desc: 'MENTE INQUEBRANTABLE ABSOLUTA. 2 años de disciplina. Has creado tu propio universo.' }
+    { level: 35, name: 'La Deidad Suprema', title: 'Luz Absoluta', reqXP: 99000, img: wiki('7/72/Supreme_Deity_Anime.png', 700), pos: 'center 15%', desc: 'Luz absoluta y dominio de las reglas del universo.' },
+    { level: 36, name: 'El Rey Demonio', title: 'Cuerpo Original', reqXP: 99500, img: wiki('c/c7/Demon_King_anime_full_appearance.png', 700), pos: 'center 15%', desc: 'Soberanía total sobre la materia, las finanzas y el entorno.' },
+    { level: 37, name: 'Meliodas', title: 'Forma Rey Demonio', reqXP: 99800, img: wiki('3/38/Meliodas_%22Demon_King%22_Anime.png', 602), pos: 'center 6%', desc: 'El poder capaz de destruir las maldiciones eternas. Control absoluto de tu destino.' },
+    { level: 38, name: 'Rey Arturo', title: 'El Caos Primordial', reqXP: 100000, img: wiki('3/3f/Arthur_%22Chaos_Eyes%22_Anime.png', 1000), pos: 'center 30%', desc: 'MENTE INQUEBRANTABLE ABSOLUTA. 2 años de disciplina. Has creado tu propio universo.' }
 ];
 
 // Escenarios de Britannia usados como fondo de cada pestaña.

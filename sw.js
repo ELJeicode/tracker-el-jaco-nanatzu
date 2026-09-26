@@ -1,6 +1,6 @@
 // Service worker: permite instalar la app y usarla sin internet.
 // Sube CACHE cuando cambies archivos para forzar la actualización en el celular.
-const CACHE = 'nanatsu-v5';
+const CACHE = 'nanatsu-v6';
 const APP = ['./', './index.html', './niveles.js', './sync.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
