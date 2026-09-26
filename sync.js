@@ -77,12 +77,19 @@ const SUPABASE_KEY = 'sb_publishable_zZojq41H3J2bzHwPC4Ti9Q_TYbMEAmK';
 
         out.totalXP = ctr(B.totalXP, L.totalXP, R.totalXP);
         out.spentXP = ctr(B.spentXP, L.spentXP, R.spentXP);
+        out.shields = ctr(B.shields, L.shields, R.shields);
 
         out.days = {};
         const keys = new Set([...Object.keys(L.days || {}), ...Object.keys(R.days || {})]);
         for (const k of keys) {
             const b = B.days?.[k], l = L.days?.[k], r = R.days?.[k];
-            out.days[k] = { xp: ctr(b?.xp, l?.xp, r?.xp), complete: !!pick(b?.complete, l?.complete, r?.complete) };
+            out.days[k] = {
+                xp: ctr(b?.xp, l?.xp, r?.xp),
+                complete: !!pick(b?.complete, l?.complete, r?.complete),
+                shielded: !!pick(b?.shielded, l?.shielded, r?.shielded)
+            };
+            const via = pick(b?.via, l?.via, r?.via);
+            if (out.days[k].shielded && via) out.days[k].via = via;
         }
 
         if (L.day === R.day) {

@@ -342,6 +342,28 @@
         .wd-fill { width: 100%; background: linear-gradient(0deg, var(--crimson), var(--gold)); opacity: 0.85; transition: height 0.6s; }
         .wd-cell.complete { border-color: var(--gold); box-shadow: 0 0 12px rgba(212, 175, 55, 0.35); }
         .wd-cell.complete::after { content: '🐉'; position: absolute; top: 4px; left: 0; right: 0; font-size: 14px; }
+        .wd-cell.shielded { border-color: #7dd3fc; border-style: dashed; }
+        .wd-cell.shielded::after { content: '🛡️'; position: absolute; top: 4px; left: 0; right: 0; font-size: 14px; }
+        .wd-cell.shielded.run::after { content: '🏃'; }
+
+        .shield-bar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
+        }
+        .shield-inv { font-size: 13px; color: var(--muted); margin-right: auto; }
+        .shield-inv b { color: var(--text); font-family: var(--display); font-size: 15px; }
+        .shield-btn {
+            font-size: 12.5px; font-weight: 700; padding: 8px 12px; border-radius: 10px;
+            color: #bae6fd; border: 1px solid rgba(125, 211, 252, 0.4); background: rgba(125, 211, 252, 0.08);
+            transition: background 0.2s;
+        }
+        .shield-btn:hover:not(:disabled) { background: rgba(125, 211, 252, 0.16); }
+        .shield-btn.run { color: #bbf7d0; border-color: rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.08); }
+        .shield-btn.run:hover:not(:disabled) { background: rgba(52, 211, 153, 0.16); }
+        .shield-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .shield-note { width: 100%; font-size: 12px; color: var(--muted); }
+
+        .reward.shield-card { border-color: rgba(125, 211, 252, 0.4); background: linear-gradient(160deg, rgba(125, 211, 252, 0.08), var(--panel) 60%); }
         .wd-cell.today { outline: 2px solid rgba(245, 214, 123, 0.5); outline-offset: 2px; }
         .wd-label { font-size: 11px; color: var(--muted); margin-top: 6px; text-transform: capitalize; }
         .wd-xp { font-size: 11px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
@@ -668,6 +690,7 @@
                     <div class="week-best" id="week-best"></div>
                 </div>
                 <div class="week-days" id="week-days"></div>
+                <div class="shield-bar" id="shield-bar"></div>
             </div>
 
             <!-- BÁSCULA -->
@@ -953,7 +976,8 @@
                 transactions: [],
                 rewards: DEFAULT_REWARDS.map(r => ({ ...r, times: 0 })),
                 lastRank: 1,
-                updatedAt: 0
+                updatedAt: 0,
+                shields: 0
             };
         }
 
@@ -994,6 +1018,7 @@
             if (!state.days) state.days = {};
             if (!state.weightGoal) state.weightGoal = { start: 64, goal: 70 };
             if (typeof state.updatedAt !== 'number') state.updatedAt = 0;
+            if (typeof state.shields !== 'number') state.shields = 0;
             // Rutina actualizada → hábitos nuevos. La XP y la racha ya ganadas se conservan.
             if (state.habitsVersion !== HABITS_VERSION) {
                 state.habits = DEFAULT_HABITS.map(h => ({ ...h, done: false }));
@@ -1026,19 +1051,73 @@
         const coins = () => state.totalXP - state.spentXP;
         const dayMaxXP = () => state.habits.reduce((a, h) => a + h.xp, 0);
 
+        // Un día protegido con el Escudo del Dragón no suma a la racha, pero tampoco la rompe.
+        const isDone = k => !!state.days[k]?.complete;
+        const isShielded = k => !!state.days[k]?.shielded && !state.days[k]?.complete;
+
         function streak() {
             let d = dayKey();
-            if (!state.days[d]?.complete) d = addDays(d, -1);
+            if (!isDone(d) && !isShielded(d)) d = addDays(d, -1);
             let n = 0;
-            while (state.days[d]?.complete) { n++; d = addDays(d, -1); }
+            while (isDone(d) || isShielded(d)) { if (isDone(d)) n++; d = addDays(d, -1); }
             return n;
         }
 
         function bestStreak() {
-            const keys = Object.keys(state.days).filter(k => state.days[k].complete).sort();
+            const keys = Object.keys(state.days).filter(k => isDone(k) || isShielded(k)).sort();
             let best = 0, run = 0, prev = null;
-            keys.forEach(k => { run = prev && addDays(prev, 1) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; });
+            keys.forEach(k => {
+                if (!(prev && addDays(prev, 1) === k)) run = 0;
+                if (isDone(k)) run++;
+                best = Math.max(best, run);
+                prev = k;
+            });
             return best;
+        }
+
+        // ================= Escudo del Dragón =================
+        const SHIELD = { cost: 500, max: 2, cooldownDays: 7 };
+
+        // Día (hoy o ayer) del último escudo usado dentro de la ventana de 7 días, o null.
+        function lastShieldUse() {
+            for (let i = 0; i < SHIELD.cooldownDays; i++) {
+                const k = addDays(dayKey(), -i);
+                if (state.days[k]?.shielded) return k;
+            }
+            return null;
+        }
+
+        // Motivo por el que NO se puede proteger ese día, o '' si sí se puede.
+        // via: 'shield' (gasta un escudo) o '10k' (corriste 10 km hoy para salvar ayer).
+        function shieldBlocker(k, via = 'shield') {
+            if (via === 'shield' && (state.shields || 0) < 1) return 'No tienes escudos';
+            if (via === '10k' && k !== addDays(dayKey(), -1)) return 'La Redención 10K solo salva el día anterior';
+            if (isDone(k)) return 'Ese día ya está completo';
+            if (state.days[k]?.shielded) return 'Ese día ya está protegido';
+            const used = lastShieldUse();
+            if (used) return `Ya usaste uno el ${shortDate(used)} (1 cada ${SHIELD.cooldownDays} días)`;
+            return '';
+        }
+
+        function buyShield() {
+            if (coins() < SHIELD.cost || (state.shields || 0) >= SHIELD.max) return;
+            state.spentXP += SHIELD.cost;
+            state.shields = (state.shields || 0) + 1;
+            toast(`🛡️ Escudo del Dragón comprado · −${fmtNum(SHIELD.cost)} oro`);
+            save();
+        }
+
+        function useShield(k, via = 'shield') {
+            if (shieldBlocker(k, via)) return;
+            const label = k === dayKey() ? 'HOY' : `AYER (${shortDate(k)})`;
+            const msg = via === '10k'
+                ? `🏃 REDENCIÓN 10K\n\n¿Corriste 10 km HOY, de verdad y completos?\n\nSi es así, AYER (${shortDate(k)}) queda protegido: la racha no se rompe, aunque ese día no suma.`
+                : `¿Usar un Escudo del Dragón para proteger ${label}?\n\nLa racha no se rompe, pero ese día no suma. Si al final completas los 7 hábitos, el escudo te vuelve.`;
+            if (!confirm(msg)) return;
+            if (via === 'shield') state.shields--;
+            state.days[k] = { xp: 0, complete: false, ...state.days[k], shielded: true, via };
+            toast(via === '10k' ? '🏃 ¡10 km! Ayer queda redimido. La racha sigue viva.' : `🛡️ ${k === dayKey() ? 'Hoy' : 'Ayer'} queda protegido. La racha sigue viva.`);
+            save();
         }
 
         function avgDailyXP() {
@@ -1063,6 +1142,12 @@
             rec.complete = state.habits.length > 0 && state.habits.every(x => x.done);
             if (h.done) toast(`${SINS[h.sin]?.icon || '⚔️'} +${h.xp} XP · ${SINS[h.sin]?.label || ''}`);
             if (rec.complete && !wasComplete) toast('🐉 ¡Día completo! Racha: ' + streak());
+            // Se protegió hoy pero al final sí se completó → el escudo vuelve al inventario.
+            if (rec.complete && rec.shielded && rec.via !== '10k') {
+                rec.shielded = false;
+                state.shields = (state.shields || 0) + 1;
+                toast('🛡️ Completaste el día: el escudo vuelve a tu inventario');
+            }
             save();
         }
 
@@ -1070,7 +1155,7 @@
             if (!confirm('¿Desmarcar todos los hábitos de hoy? Se resta la XP ganada hoy.')) return;
             const today = dayKey();
             state.habits.forEach(h => { if (h.done) state.totalXP = Math.max(0, state.totalXP - h.xp); h.done = false; });
-            state.days[today] = { xp: 0, complete: false };
+            state.days[today] = { ...state.days[today], xp: 0, complete: false };
             save();
         }
 
@@ -1224,7 +1309,7 @@
                 const [y, m, dd] = k.split('-').map(Number);
                 const wd = new Date(y, m - 1, dd).toLocaleDateString('es-CO', { weekday: 'short' }).replace('.', '');
                 return `<div class="wd">
-                    <div class="wd-cell ${d.complete ? 'complete' : ''} ${k === today ? 'today' : ''}">
+                    <div class="wd-cell ${d.complete ? 'complete' : ''} ${isShielded(k) ? 'shielded' : ''} ${isShielded(k) && d.via === '10k' ? 'run' : ''} ${k === today ? 'today' : ''}" title="${isShielded(k) ? (d.via === '10k' ? 'Redimido con 10K' : 'Protegido con escudo') : ''}">
                         <div class="wd-fill" style="height:${Math.min(100, (d.xp / max) * 100)}%"></div>
                     </div>
                     <div class="wd-label">${wd}</div>
@@ -1232,6 +1317,31 @@
                 </div>`;
             }).join('');
             $('week-best').innerHTML = `Mejor racha: <b style="color:var(--gold-2)">${bestStreak()}</b> días`;
+            renderShieldBar();
+        }
+
+        // Botones del escudo: solo aparecen cuando hay una racha que salvar.
+        function renderShieldBar() {
+            const today = dayKey(), yesterday = addDays(today, -1), before = addDays(today, -2);
+            const alive = k => isDone(k) || isShielded(k);
+            const btn = (k, via, text) => {
+                const why = shieldBlocker(k, via);
+                return `<button type="button" class="shield-btn ${via === '10k' ? 'run' : ''}" data-shield="${k}" data-via="${via}" ${why ? `disabled title="${esc(why)}"` : ''}>${text}</button>`;
+            };
+            let buttons = '', notes = [];
+            if (!isDone(yesterday) && !state.days[yesterday]?.shielded && alive(before)) {
+                buttons += btn(yesterday, '10k', '🏃 Corrí 10K hoy → salvar ayer') + btn(yesterday, 'shield', '🛡️ Proteger ayer');
+                notes.push('Ayer rompió la racha. Puedes salvarla corriendo 10 km hoy o con un escudo.');
+            }
+            if (!isDone(today) && !state.days[today]?.shielded && alive(yesterday)) {
+                buttons += btn(today, 'shield', '🛡️ Proteger hoy');
+            }
+            const used = lastShieldUse();
+            if (used) notes.push(`Última protección: ${shortDate(used)}. Próxima disponible el ${shortDate(addDays(used, SHIELD.cooldownDays))}.`);
+            $('shield-bar').innerHTML = `
+                <div class="shield-inv">🛡️ Escudos del Dragón: <b>${state.shields || 0}</b> / ${SHIELD.max}</div>
+                ${buttons}
+                ${notes.length ? `<div class="shield-note">${notes.join(' ')}</div>` : ''}`;
         }
 
         const kgFmt = n => n.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -1377,7 +1487,22 @@
 
         function renderRewards() {
             const c = coins();
-            $('rewards-list').innerHTML = state.rewards.map(r => {
+            const have = state.shields || 0;
+            const full = have >= SHIELD.max;
+            const canShield = c >= SHIELD.cost && !full;
+            const shieldCard = `<div class="panel reward shield-card">
+                    <div class="reward-top">
+                        <div class="reward-ico">🛡️</div>
+                        <div><div class="reward-title">Escudo del Dragón</div>
+                        <div class="reward-desc">Protege la racha un día de fuerza mayor (hoy o ayer). Máximo ${SHIELD.max} guardados y 1 uso cada ${SHIELD.cooldownDays} días. Si completas el día protegido, te vuelve. También puedes salvar ayer gratis corriendo 10 km hoy.</div></div>
+                    </div>
+                    <div class="bar" style="height:6px"><div class="bar-fill" style="width:${Math.min(100, (c / SHIELD.cost) * 100)}%"></div></div>
+                    <div class="reward-foot">
+                        <div><div class="reward-cost">🪙 ${fmtNum(SHIELD.cost)}</div><div class="reward-times">En inventario: ${have} / ${SHIELD.max}${!full && c < SHIELD.cost ? ` · Faltan ${fmtNum(SHIELD.cost - c)}` : ''}</div></div>
+                        <button class="gold-btn" id="buy-shield" ${canShield ? '' : 'disabled'}>${full ? 'Lleno' : 'Comprar'}</button>
+                    </div>
+                </div>`;
+            $('rewards-list').innerHTML = shieldCard + state.rewards.map(r => {
                 const can = c >= r.cost;
                 return `<div class="panel reward">
                     <div class="reward-top">
@@ -1512,7 +1637,12 @@
         // ================= Eventos =================
         $('habits-list').addEventListener('click', e => { const b = e.target.closest('[data-habit]'); if (b) toggleHabit(Number(b.dataset.habit)); });
         $('trans-history').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (b) deleteTransaction(Number(b.dataset.del)); });
-        $('rewards-list').addEventListener('click', e => { const b = e.target.closest('[data-claim]'); if (b) claimReward(Number(b.dataset.claim)); });
+        $('rewards-list').addEventListener('click', e => {
+            if (e.target.closest('#buy-shield')) return buyShield();
+            const b = e.target.closest('[data-claim]');
+            if (b) claimReward(Number(b.dataset.claim));
+        });
+        $('shield-bar').addEventListener('click', e => { const b = e.target.closest('[data-shield]'); if (b && !b.disabled) useShield(b.dataset.shield, b.dataset.via); });
         document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
         $('reset-day').addEventListener('click', resetDay);
         $('tx-form').addEventListener('submit', addTransaction);
