@@ -5,8 +5,8 @@
 // La clave "publishable" (o "anon") está hecha para ir en el código público: lo que
 // protege los datos son las reglas RLS de la tabla (ver supabase.sql) y que el
 // registro de usuarios nuevos está desactivado.
-const SUPABASE_URL = '';
-const SUPABASE_KEY = '';
+const SUPABASE_URL = 'https://gqqqcsebtvhahnbbllrr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_zZojq41H3J2bzHwPC4Ti9Q_TYbMEAmK';
 
 (() => {
     const TABLE = 'tracker_state';
