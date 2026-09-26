@@ -26,7 +26,7 @@ const SIN_LEVELS = [
     { name: 'Hendrickson', title: 'Demonio Gris', reqXP: 18000, img: wiki('b/b6/Hendrickson_Grey_Demon_Form.png', 250), pos: 'center 8%', desc: 'Superación de la naturaleza humana. Resistencia a la incomodidad y esfuerzo continuo.' },
 
     // II. PECADOS CAPITALES - FORMA BASE
-    { name: 'Elizabeth', title: 'Princesa de Liones · El Inicio del Viaje', reqXP: 23000, img: wiki('0/06/Elizabeth_Initial_Outfit_Anime.png', 700), pos: 'center 12%', desc: 'La que empezó todo: valor sin poder. Das el primer paso aunque no te sientas listo.' },
+    { name: 'Elizabeth', title: 'Princesa de Liones', reqXP: 23000, img: wiki('0/06/Elizabeth_Initial_Outfit_Anime.png', 700), pos: 'center 12%', desc: 'La que empezó todo: valor sin poder. Das el primer paso aunque no te sientas listo.' },
     { name: 'Gowther', title: 'Pecado de la Lujuria', reqXP: 27000, img: wiki('a/a5/Gowther_Anime.png', 500), pos: 'center 10%', desc: 'Control de impulsos. Mente analítica sin caer en tentaciones de dopamina barata.' },
     { name: 'Diane', title: 'Pecado de la Envidia', reqXP: 31000, img: wiki('5/5e/Diane_anime_full_appearance.png', 413), pos: 'center 4%', desc: 'Fuerza bruta natural. Te enfocas exclusivamente en tu propio progreso sin comparar.' },
     { name: 'Ban', title: 'Pecado de la Avaricia', reqXP: 35000, img: wiki('e/e3/Ban_anime_full_appearance.png', 190), pos: 'center 3%', desc: 'Resistencia física y rápida recuperación. Inicios de tus metas financieras.' },
@@ -34,7 +34,7 @@ const SIN_LEVELS = [
     { name: 'Meliodas', title: 'Pecado de la Ira', reqXP: 43000, img: wiki('7/7b/Meliodas_anime_full_appearance.png', 320), pos: 'center 4%', desc: 'Líder de los Pecados. Mantienes la calma ante la presión laboral y física.' },
 
     // III. TESOROS SAGRADOS
-    { name: 'Bartra', title: 'Rey de Liones · El Visionario', reqXP: 48000, img: wiki('f/fc/Bartra_Anime_Infobox.png', 700), pos: 'center 20%', desc: 'Visión clara del futuro: planeas tus metas a largo plazo y las sigues con decisión.' },
+    { name: 'Bartra', title: 'Rey de Liones', reqXP: 48000, img: wiki('f/fc/Bartra_Anime_Infobox.png', 700), pos: 'center 20%', desc: 'Visión clara del futuro: planeas tus metas a largo plazo y las sigues con decisión.' },
     { name: 'Diane', title: 'Tesoro Sagrado Gideon', reqXP: 51500, img: wiki('c/c4/Diane_Gideon_Anime.png', 468), pos: 'center 20%', desc: 'Conexión total con la tierra. Estabilidad mental sólida frente a cualquier reto.' },
     { name: 'Meliodas', title: 'Tesoro Sagrado Lostvayne', reqXP: 55000, img: wiki('5/5c/Meliodas_considering_to_sell_Lostvayne.png', 900), pos: '62% center', desc: 'Clonación física y mental. Multiplicas tu productividad en proyectos personales.' },
     { name: 'Gowther', title: 'Tesoro Sagrado Herritt', reqXP: 58500, img: wiki('3/38/Gowther_using_Herritt.png', 900), pos: '72% center', desc: 'Reescribiendo la mente. Memoria y retención absoluta durante tus sesiones de estudio.' },
