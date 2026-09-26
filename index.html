@@ -482,6 +482,21 @@
         .modal-name { font-family: var(--display); font-weight: 900; font-size: 28px; }
         .modal-title { color: var(--gold-2); font-family: var(--display); margin-top: 4px; }
         .modal-desc { color: var(--muted); font-size: 14px; margin: 12px 0 18px; line-height: 1.5; }
+        .modal-desc b { color: var(--text); }
+
+        /* ---------- Sincronización ---------- */
+        .sync-stat { text-align: left; transition: border-color 0.2s; }
+        .sync-stat:hover { border-color: var(--line-strong); }
+        .sync-text { font-family: var(--sans); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+        .sync-card { text-align: left; }
+        .sync-card .modal-kicker { text-align: center; }
+        .sync-form { display: flex; flex-direction: column; gap: 10px; }
+        .sync-err { font-size: 13px; color: #fca5a5; min-height: 0; }
+        .sync-err:empty { display: none; }
+        .sync-close { width: 100%; margin-top: 10px; }
+        .sync-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .sync-compare div { padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+        .sync-compare b { display: block; font-family: var(--display); color: var(--gold-2); font-size: 13px; margin-bottom: 2px; }
 
         /* ---------- Toast ---------- */
         .toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
@@ -509,10 +524,14 @@
             .topbar { position: static; }
             .topbar-inner { justify-content: center; }
             .brand-name { font-size: 15px; }
-            .stats { width: 100%; }
-            .stat { flex: 1; justify-content: center; padding: 6px 8px; gap: 6px; }
+            .stats { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+            .stat { flex-direction: column; justify-content: center; padding: 6px 4px; gap: 2px; text-align: center; min-width: 0; }
+            .stat > div { min-width: 0; }
             .stat-icon { font-size: 16px; }
-            .stat-val { font-size: 15px; }
+            .stat-label { font-size: 9px; letter-spacing: 0.1em; }
+            .stat-val { font-size: 15px; overflow: hidden; text-overflow: ellipsis; }
+            .sync-stat { text-align: center; }
+            .sync-text { font-size: 11.5px; }
             .habits { grid-template-columns: 1fr; }
             .kpis { grid-template-columns: 1fr; }
             .coming { grid-template-columns: 1fr; }
@@ -566,6 +585,10 @@
                     <span class="stat-icon">🪙</span>
                     <div><div class="stat-label">Oro</div><div class="stat-val" id="coins-val" style="color: #fcd34d">0</div></div>
                 </div>
+                <button class="stat sync-stat" id="sync-btn" type="button" title="Sincronización entre dispositivos">
+                    <span class="stat-icon" id="sync-icon">☁️</span>
+                    <div><div class="stat-label">Nube</div><div class="stat-val sync-text" id="sync-text">…</div></div>
+                </button>
             </div>
         </div>
     </header>
@@ -778,9 +801,46 @@
         </div>
     </div>
 
+    <!-- Sincronización: sesión -->
+    <div class="modal" id="sync-modal" role="dialog" aria-modal="true" aria-labelledby="sync-title">
+        <div class="panel ornate modal-card sync-card">
+            <div class="modal-kicker" id="sync-title">☁️ SINCRONIZACIÓN</div>
+            <form id="sync-login" class="sync-form">
+                <p class="modal-desc">Inicia sesión para ver tus hábitos, peso, rango y recompensas igual en el PC y en el celular.<br><b>Las finanzas no se suben:</b> se quedan solo en este dispositivo.</p>
+                <input class="field" type="email" id="sync-email" placeholder="Correo" autocomplete="username" required>
+                <input class="field" type="password" id="sync-pass" placeholder="Contraseña" autocomplete="current-password" required>
+                <div class="sync-err" id="sync-err"></div>
+                <button class="gold-btn" type="submit" id="sync-login-btn">Entrar</button>
+            </form>
+            <div id="sync-account" class="sync-form" hidden>
+                <p class="modal-desc">Conectado como <b id="sync-user"></b><br><span id="sync-last"></span></p>
+                <div class="sync-err" id="sync-err2"></div>
+                <button class="gold-btn" type="button" id="sync-now">Sincronizar ahora</button>
+                <button class="ghost-btn" type="button" id="sync-logout">Cerrar sesión en este dispositivo</button>
+            </div>
+            <p class="modal-desc" id="sync-off" hidden>La sincronización aún no está configurada.</p>
+            <button class="ghost-btn sync-close" type="button" id="sync-close">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Sincronización: primera vez con datos en ambos lados -->
+    <div class="modal" id="sync-choice" role="dialog" aria-modal="true">
+        <div class="panel ornate modal-card sync-card">
+            <div class="modal-kicker">⚔️ DOS VERSIONES DE TU PROGRESO</div>
+            <p class="modal-desc">Este dispositivo y la nube tienen datos distintos. ¿Cuáles quieres conservar?</p>
+            <div class="sync-compare" id="sync-compare"></div>
+            <div class="sync-form">
+                <button class="gold-btn" type="button" data-choice="cloud">Usar los de la nube</button>
+                <button class="ghost-btn" type="button" data-choice="local">Reemplazar la nube con los de este dispositivo</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toasts" id="toasts"></div>
 
     <script src="niveles.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script defer src="sync.js"></script>
     <script>
         // ================= Datos base =================
         const STORAGE_KEY = 'nanatsu_tracker_data';
@@ -892,7 +952,8 @@
                 days: {},
                 transactions: [],
                 rewards: DEFAULT_REWARDS.map(r => ({ ...r, times: 0 })),
-                lastRank: 1
+                lastRank: 1,
+                updatedAt: 0
             };
         }
 
@@ -919,23 +980,36 @@
                 const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
                 state = !raw ? freshState() : raw.version === 2 ? raw : migrate(raw);
             } catch { state = freshState(); }
+            normalizeState();
+            persist();
+            rollover();
+        }
+
+        // Completa campos que faltan en datos viejos, de un respaldo o de la nube.
+        function normalizeState() {
             if (!state.lastRank) state.lastRank = rankFor(state.totalXP).cur.level;
             if (!Array.isArray(state.weights)) state.weights = [];
+            if (!Array.isArray(state.transactions)) state.transactions = [];
+            if (!Array.isArray(state.rewards)) state.rewards = DEFAULT_REWARDS.map(r => ({ ...r, times: 0 }));
+            if (!state.days) state.days = {};
             if (!state.weightGoal) state.weightGoal = { start: 64, goal: 70 };
+            if (typeof state.updatedAt !== 'number') state.updatedAt = 0;
             // Rutina actualizada → hábitos nuevos. La XP y la racha ya ganadas se conservan.
             if (state.habitsVersion !== HABITS_VERSION) {
                 state.habits = DEFAULT_HABITS.map(h => ({ ...h, done: false }));
                 state.habitsVersion = HABITS_VERSION;
-                persist();
             }
-            rollover();
         }
 
-        function persist() {
+        // byUser = el cambio lo hizo la persona (marcar, registrar…). Solo esos cambios
+        // mueven updatedAt y se suben a la nube; el cambio de día o de rango no cuenta.
+        function persist(byUser = false) {
+            if (byUser) state.updatedAt = Date.now();
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+            if (byUser && window.syncSoon) window.syncSoon();
         }
 
-        function save() { persist(); render(); }
+        function save() { persist(true); render(); }
 
         // Nuevo día → hábitos en blanco.
         function rollover() {
@@ -1049,14 +1123,14 @@
             state.transactions.unshift({ id: Date.now(), date: dayKey(), desc, amount, type, cat });
             $('trans-desc').value = '';
             $('trans-amount').value = '';
-            save();
+            persist(); render(); // finanzas: solo en este dispositivo, no se sincroniza
         }
 
         function deleteTransaction(id) {
             const t = state.transactions.find(x => x.id === id);
             if (!t || !confirm(`¿Eliminar "${t.desc}" (${fmtMoney(t.amount)})?`)) return;
             state.transactions = state.transactions.filter(x => x.id !== id);
-            save();
+            persist(); render(); // finanzas: solo en este dispositivo, no se sincroniza
         }
 
         function fillCategories() {
@@ -1383,7 +1457,6 @@
             if (tab === 'habits') renderWeightChart();
             if (tab === 'rewards') $('hawk-says').innerHTML = HAWK_LINES[Math.floor(Math.random() * HAWK_LINES.length)];
             setScene(tab);
-            try { localStorage.setItem('nanatsu_tab', tab); } catch {}
         }
 
         // ================= Respaldo =================
@@ -1403,6 +1476,7 @@
                     const data = JSON.parse(reader.result);
                     if (!confirm('Esto reemplaza todos tus datos actuales con el respaldo. ¿Continuar?')) return;
                     state = data.version === 2 ? data : migrate(data);
+                    normalizeState();
                     rollover();
                     save();
                     toast('📜 Respaldo restaurado');
@@ -1464,9 +1538,7 @@
         fillCategories();
         load();
         render();
-        let savedTab = 'habits';
-        try { savedTab = localStorage.getItem('nanatsu_tab') || 'habits'; } catch {}
-        switchTab(ESCENARIOS[savedTab] ? savedTab : 'habits');
+        switchTab('habits');
 
         // App instalable + modo sin internet (solo funciona servida por https o localhost, no con doble clic).
         if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
