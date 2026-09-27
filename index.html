@@ -442,6 +442,10 @@
         .reward-cost { font-family: var(--display); font-weight: 900; color: var(--gold-2); }
         .reward-times { font-size: 11.5px; color: var(--muted); }
         .notice { margin-top: 14px; font-size: 12.5px; color: var(--muted); text-align: center; }
+        .reward-days { display: block; font-family: var(--sans); font-weight: 500; font-size: 11.5px; color: var(--muted); }
+        .reward.grand { grid-column: 1 / -1; border-color: var(--line-strong); background: linear-gradient(120deg, rgba(212, 175, 55, 0.12), var(--panel) 55%); }
+        .reward.grand .reward-title { font-size: 20px; color: var(--gold-2); }
+        .routine-tag { display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-2); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line-strong); background: rgba(212, 175, 55, 0.08); }
 
         /* ---------- Camino del poder ---------- */
         .era { margin-bottom: 28px; }
@@ -662,6 +666,7 @@
                 <div>
                     <h2 class="section-title">Entrenamiento del Día</h2>
                     <p class="section-sub">Cada hábito es un pecado que dominas. Complétalos todos para sumar a la racha del Dragón. Objetivo: volumen limpio 64 → 70 kg.</p>
+                    <span class="routine-tag" id="routine-tag"></span>
                 </div>
                 <div class="today">
                     <div class="ring">
@@ -792,7 +797,7 @@
                 <div class="bubble" id="hawk-says"></div>
             </div>
             <div class="rewards" id="rewards-list"></div>
-            <p class="notice">🍖 Menú provisional — las recompensas definitivas se configuran después.</p>
+            <p class="notice">🪙 10 de Poder = 1 de oro · un día perfecto = 18 de oro</p>
         </section>
 
         <!-- CAMINO DEL PODER -->
@@ -878,37 +883,129 @@
             orgullo:  { icon: '🦁', label: 'León · Orgullo',      who: 'Escanor',  color: '#fbbf24' }
         };
 
-        // Manual Operativo Diario — Volumen Limpio (64 → 70 kg). Máximo diario: 180 XP.
-        // Si cambias esta lista, sube HABITS_VERSION para que se aplique a los datos guardados.
-        const HABITS_VERSION = 2;
-        const DEFAULT_HABITS = [
-            { id: 1, time: '05:00',         sin: 'orgullo',  xp: 20, text: 'Despertar sin posponer + 500 ml de agua',
-              detail: 'Cero celular la primera hora · aseo y agua fría · maleta lista (snack, muda de gym, termo)',
-              quote: 'El sol sale contigo. Escanor no negocia la mañana.' },
-            { id: 2, time: '06:00 – 15:30', sin: 'ira',      xp: 15, text: 'Jornada laboral con 3 tareas clave',
-              detail: 'Definir 3 tareas al llegar · 2 bloques de enfoque · salida puntual y desconexión',
-              quote: 'Meliodas lidera con calma bajo presión.' },
-            { id: 3, time: 'Todo el día',   sin: 'gula',     xp: 30, text: 'Nutrición de volumen: las 6 comidas',
-              detail: 'Desayuno 06:30 · snack 10:00 · almuerzo 13:00 · pre-entreno 15:45 · post-entreno 17:25 · cena 20:00',
-              quote: 'La Gula bien dirigida construye músculo: 64 → 70 kg.' },
-            { id: 4, time: '16:00 – 17:25', sin: 'envidia',  xp: 35, text: 'Gimnasio: rutina de hipertrofia completa',
-              detail: 'Movilidad 15 min · pesas 60 min (compuestos 90-120 s, aislamiento 60-75 s) · enfriamiento + respiración 4-4-6',
-              quote: 'La fuerza de gigante de Diane se construye serie a serie.' },
-            { id: 5, time: '18:00 – 20:00', sin: 'lujuria',  xp: 35, text: 'Bloque académico: Física y Matemáticas',
-              detail: '2 Pomodoros de 50 min con 10 min de pausa',
-              quote: 'Gowther graba cada fórmula con Herritt.' },
-            { id: 6, time: 'Todo el día',   sin: 'avaricia', xp: 30, text: 'Cero Vape / Cero Marihuana (Día limpio)',
-              detail: 'Ni una excepción. El cuerpo en volumen necesita pulmones limpios.',
-              quote: 'Ban resiste cualquier tentación. Cuerpo limpio.' },
-            { id: 7, time: '20:45 – 21:30', sin: 'pereza',   xp: 15, text: 'Cierre: registro, alistamiento y apagón',
-              detail: 'Registrar en el tracker · alistar snack y ropa · pantallas fuera 21:15 · dormir 21:30 (7,5 h)',
-              quote: 'King duerme para despertar a las 05:00 como Rey Hada.' }
-        ];
+        // Manual Operativo — Volumen Limpio (64 → 70 kg). Cada rutina suma 180 XP.
+        // La app elige la rutina según el día. "key" identifica el mismo hábito entre rutinas
+        // (si cambia la rutina a mitad del día, lo ya marcado se conserva).
+        // Si cambias alguna lista, sube HABITS_VERSION para que se aplique a los datos guardados.
+        const HABITS_VERSION = 3;
+        const ROUTINES = {
+            weekday: {
+                name: 'Lunes a viernes · Jornada del Caballero',
+                habits: [
+                    { id: 1, key: 'wake',  time: '05:00',         sin: 'orgullo',  xp: 20, text: 'Despertar sin posponer + 500 ml de agua',
+                      detail: 'Cero celular la primera hora · aseo y agua fría · maleta lista (snack, muda de gym, termo)',
+                      quote: 'El sol sale contigo. Escanor no negocia la mañana.' },
+                    { id: 2, key: 'work',  time: '06:00 – 15:30', sin: 'ira',      xp: 15, text: 'Jornada laboral con 3 tareas clave',
+                      detail: 'Definir 3 tareas al llegar · 2 bloques de enfoque · salida puntual y desconexión',
+                      quote: 'Meliodas lidera con calma bajo presión.' },
+                    { id: 3, key: 'food',  time: 'Todo el día',   sin: 'gula',     xp: 30, text: 'Nutrición de volumen: las 6 comidas',
+                      detail: 'Desayuno 06:30 · snack 10:00 · almuerzo 13:00 · pre-entreno 15:45 · post-entreno 17:25 · cena 20:00',
+                      quote: 'La Gula bien dirigida construye músculo: 64 → 70 kg.' },
+                    { id: 4, key: 'gym',   time: '16:00 – 17:25', sin: 'envidia',  xp: 35, text: 'Gimnasio: rutina de hipertrofia completa',
+                      detail: 'Movilidad 15 min · pesas 60 min (compuestos 90-120 s, aislamiento 60-75 s) · enfriamiento + respiración 4-4-6',
+                      quote: 'La fuerza de gigante de Diane se construye serie a serie.' },
+                    { id: 5, key: 'study', time: '18:00 – 20:00', sin: 'lujuria',  xp: 35, text: 'Bloque académico: Física y Matemáticas',
+                      detail: '2 Pomodoros de 50 min con 10 min de pausa',
+                      quote: 'Gowther graba cada fórmula con Herritt.' },
+                    { id: 6, key: 'vape',  time: 'Todo el día',   sin: 'avaricia', xp: 30, text: 'Cero Vape / Cero Marihuana (Día limpio)',
+                      detail: 'Ni una excepción. El cuerpo en volumen necesita pulmones limpios.',
+                      quote: 'Ban resiste cualquier tentación. Cuerpo limpio.' },
+                    { id: 7, key: 'close', time: '20:45 – 21:30', sin: 'pereza',   xp: 15, text: 'Cierre: registro, alistamiento y apagón',
+                      detail: 'Registrar en el tracker · alistar snack y ropa · pantallas fuera 21:15 · dormir 21:30 (7,5 h)',
+                      quote: 'King duerme para despertar a las 05:00 como Rey Hada.' }
+                ]
+            },
+            saturday: {
+                name: 'Sábado · Día del Guerrero',
+                habits: [
+                    { id: 101, key: 'wake',  time: '05:00',         sin: 'orgullo',  xp: 20, text: 'Despertar sin posponer + 500 ml de agua',
+                      detail: 'Cero celular la primera hora · aseo y agua fría',
+                      quote: 'El sábado también sale el sol. Escanor no regala la mañana.' },
+                    { id: 102, key: 'work',  time: 'Mañana',        sin: 'ira',      xp: 25, text: 'Misión del sábado: 3 tareas clave',
+                      detail: 'Al despertar define 3 tareas (proyecto personal, mercado del plan o vueltas pendientes) y cúmplelas las 3',
+                      quote: 'Sin jefe ni horario: el capitán eres tú.' },
+                    { id: 103, key: 'food',  time: 'Todo el día',   sin: 'gula',     xp: 30, text: 'Nutrición de volumen: las 6 comidas',
+                      detail: 'Las mismas 6 comidas del plan, ajustadas al horario del sábado',
+                      quote: 'La Gula bien dirigida construye músculo: 64 → 70 kg.' },
+                    { id: 104, key: 'gym',   time: 'Tu horario',    sin: 'envidia',  xp: 35, text: 'Gimnasio: rutina de hipertrofia completa',
+                      detail: '6.º entrenamiento de la semana · movilidad · pesas hasta el fallo · enfriamiento + respiración 4-4-6',
+                      quote: 'Seis días de gigante, uno de descanso.' },
+                    { id: 105, key: 'study', time: 'Tarde',         sin: 'lujuria',  xp: 30, text: 'Estudio profundo: Física y Matemáticas',
+                      detail: '2 a 3 Pomodoros de 50 min con 10 min de pausa',
+                      quote: 'Sin trabajo que interrumpa, Gowther lee el doble.' },
+                    { id: 106, key: 'vape',  time: 'Todo el día',   sin: 'avaricia', xp: 30, text: 'Cero Vape / Cero Marihuana (Día limpio)',
+                      detail: 'El fin de semana es donde más tienta. Ahí se gana.',
+                      quote: 'Ban resiste cualquier tentación. Cuerpo limpio.' },
+                    { id: 107, key: 'close', time: '20:45 – 21:30', sin: 'pereza',   xp: 10, text: 'Cierre: registro y apagón',
+                      detail: 'Registrar en el tracker · pantallas fuera 21:15 · dormir 21:30',
+                      quote: 'King duerme para despertar a las 05:00 como Rey Hada.' }
+                ]
+            },
+            sunday: {
+                name: 'Domingo · Descanso productivo',
+                habits: [
+                    { id: 201, key: 'wake',     time: '06:00 – 08:00', sin: 'orgullo',  xp: 15, text: 'Despertar sin posponer + agua',
+                      detail: 'Domingo flexible: entre 6 y 8 · cero celular la primera hora',
+                      quote: 'Hasta el sol del domingo sale con calma.' },
+                    { id: 202, key: 'home',     time: 'Mañana',        sin: 'pereza',   xp: 25, text: 'Hogar en orden',
+                      detail: 'Lavar ropa · barrer · trapear · limpiar baños',
+                      quote: 'King vence la pereza hasta en su bosque.' },
+                    { id: 203, key: 'food',     time: 'Todo el día',   sin: 'gula',     xp: 20, text: 'Nutrición de volumen: las 6 comidas',
+                      detail: 'El músculo crece el día de descanso: no bajes la comida',
+                      quote: 'La Gula bien dirigida construye músculo: 64 → 70 kg.' },
+                    { id: 204, key: 'mealprep', time: 'Mañana',        sin: 'gula',     xp: 15, text: 'Meal prep: comidas de la semana',
+                      detail: 'Deja listos los snacks de las 10:00 y los almuerzos de lunes y martes',
+                      quote: 'Merlin prepara las pociones antes de la batalla.' },
+                    { id: 205, key: 'family',   time: 'Tu horario',    sin: 'envidia',  xp: 25, text: 'Familia: visitar a papá + llamar a la abuela',
+                      detail: 'Tiempo de calidad, sin celular en la mesa',
+                      quote: 'Los gigantes cuidan a los suyos.' },
+                    { id: 206, key: 'read',     time: 'Tu horario',    sin: 'lujuria',  xp: 10, text: 'Lectura por gusto (30 min)',
+                      detail: 'Lo que te guste: novela, manga, historia, ciencia…',
+                      quote: 'Gowther lee por placer, no por obligación.' },
+                    { id: 207, key: 'plan',     time: 'Tarde',         sin: 'ira',      xp: 20, text: 'Planear la semana',
+                      detail: '3 metas de la semana · pesarte (Báscula) · revisar gastos · alistar ropa y maleta del lunes',
+                      quote: 'Meliodas planea la batalla antes de que empiece.' },
+                    { id: 208, key: 'rest',     time: 'Tu horario',    sin: 'orgullo',  xp: 10, text: 'Descanso activo',
+                      detail: 'Caminata de 30–40 min o estiramientos · sin pesas',
+                      quote: 'Hasta Escanor descansa para volver más fuerte.' },
+                    { id: 209, key: 'noscreen', time: 'Tarde',         sin: 'lujuria',  xp: 10, text: 'Una hora sin pantallas',
+                      detail: 'Celular y PC lejos: afuera, familia, lectura o descanso',
+                      quote: 'La mente también se recupera.' },
+                    { id: 210, key: 'vape',     time: 'Todo el día',   sin: 'avaricia', xp: 20, text: 'Cero Vape / Cero Marihuana (Día limpio)',
+                      detail: 'Domingo de descanso, no de recaída.',
+                      quote: 'Ban resiste cualquier tentación. Cuerpo limpio.' },
+                    { id: 211, key: 'close',    time: '20:45 – 21:30', sin: 'pereza',   xp: 10, text: 'Cierre: apagón para el lunes',
+                      detail: 'Alarma a las 05:00 · pantallas fuera 21:15 · dormir 21:30',
+                      quote: 'El lunes se gana el domingo en la noche.' }
+                ]
+            }
+        };
+        const DEFAULT_HABITS = ROUTINES.weekday.habits;   // para convertir datos de la versión Gemini
+        const LEGACY_KEYS = { 1: 'wake', 2: 'work', 3: 'food', 4: 'gym', 5: 'study', 6: 'vape', 7: 'close' };
 
+        // Qué rutina toca una fecha (YYYY-MM-DD): sábado, domingo o entre semana.
+        function routineFor(k = dayKey()) {
+            const wd = new Date(k + 'T12:00').getDay();
+            return wd === 6 ? 'saturday' : wd === 0 ? 'sunday' : 'weekday';
+        }
+        const freshHabits = k => ROUTINES[routineFor(k)].habits.map(h => ({ ...h, done: false }));
+
+        // ================= Oro =================
+        // El Poder (XP) define el rango; el oro es la moneda de la taberna: 10 XP = 1 de oro.
+        // Un día perfecto (180 XP) = 18 de oro. Los precios están en oro.
+        const XP_PER_GOLD = 10;
+        const PERFECT_DAY_GOLD = 18;
+        const REWARDS_VERSION = 2;
         const DEFAULT_REWARDS = [
-            { id: 1, icon: '🍖', title: 'Comida Especial de Premio',          desc: 'Un festín digno del Boar Hat.',         cost: 200 },
-            { id: 2, icon: '📚', title: 'Libro de Física / Material',          desc: 'Un nuevo grimorio para Merlin.',        cost: 500 },
-            { id: 3, icon: '🥊', title: 'Equipamiento Deportivo Nuevo',        desc: 'Armadura nueva para el entrenamiento.', cost: 1000 }
+            { id: 1, icon: '🍖', title: 'Banquete del Boar Hat',            desc: 'Comida especial de premio.',                          cost: 45 },
+            { id: 2, icon: '📚', title: 'Libro de Física / Material',        desc: 'Un nuevo grimorio para Merlin.',                      cost: 50 },
+            { id: 4, icon: '🍺', title: 'Cerveza bien fría',                 desc: 'Una, en la barra del Boar Hat.',                      cost: 54 },
+            { id: 5, icon: '🍜', title: 'Maruchan de pollo picante',         desc: 'El vicio permitido, bien ganado.',                    cost: 90 },
+            { id: 3, icon: '🥊', title: 'Equipamiento deportivo nuevo',      desc: 'Armadura nueva para el entrenamiento.',               cost: 100 },
+            { id: 6, icon: '🏎️', title: 'Hot Wheels',                        desc: 'Uno nuevo para la colección.',                        cost: 108 },
+            { id: 7, icon: '👕', title: 'Ropa nueva',                        desc: 'Hasta $500.000 en ropa.',                             cost: 270 },
+            { id: 8, icon: '🧴', title: 'Loción',                            desc: 'El aroma de un caballero sagrado.',                   cost: 360 },
+            { id: 9, icon: '🏍️', title: 'Yamaha DT 175',                     desc: 'La montura del Pecado. El gran premio del camino.',  cost: 1710 }
         ];
 
         const CATEGORIES = {
@@ -969,8 +1066,10 @@
                 totalXP: 0,
                 spentXP: 0,
                 day: dayKey(),
-                habits: DEFAULT_HABITS.map(h => ({ ...h, done: false })),
+                habits: freshHabits(dayKey()),
+                routine: routineFor(),
                 habitsVersion: HABITS_VERSION,
+                rewardsVersion: REWARDS_VERSION,
                 weights: [],
                 weightGoal: { start: 64, goal: 70 },
                 days: {},
@@ -1020,11 +1119,43 @@
             if (!state.weightGoal) state.weightGoal = { start: 64, goal: 70 };
             if (typeof state.updatedAt !== 'number') state.updatedAt = 0;
             if (typeof state.shields !== 'number') state.shields = 0;
-            // Rutina actualizada → hábitos nuevos. La XP y la racha ya ganadas se conservan.
-            if (state.habitsVersion !== HABITS_VERSION) {
-                state.habits = DEFAULT_HABITS.map(h => ({ ...h, done: false }));
-                state.habitsVersion = HABITS_VERSION;
+            if (!state.day) state.day = dayKey();
+            // Rutina distinta a la del día (o lista actualizada) → se cambia conservando lo ya marcado.
+            if (state.habitsVersion !== HABITS_VERSION || state.routine !== routineFor(state.day)) applyRoutine();
+            // Menú de recompensas actualizado → precios nuevos, se conservan los canjes hechos.
+            if (state.rewardsVersion !== REWARDS_VERSION) {
+                const times = id => state.rewards.find(r => r.id === id)?.times || 0;
+                state.rewards = DEFAULT_REWARDS.map(r => ({ ...r, times: times(r.id) }));
+                state.rewardsVersion = REWARDS_VERSION;
             }
+        }
+
+        // Pone la rutina que corresponde a state.day. Los hábitos que existen en ambas rutinas
+        // (misma key) conservan su marca y la XP se ajusta a su nuevo valor; los que desaparecen
+        // devuelven la XP que habían dado.
+        function applyRoutine() {
+            const key = routineFor(state.day);
+            const old = state.habits || [];
+            const keyOf = h => h.key || LEGACY_KEYS[h.id];
+            let delta = 0;
+            const used = new Set();
+            state.habits = ROUTINES[key].habits.map(h => {
+                const prev = old.find(o => keyOf(o) === h.key && !used.has(o));
+                if (prev) used.add(prev);
+                const done = !!prev?.done;
+                if (done) delta += h.xp - prev.xp;
+                return { ...h, done };
+            });
+            old.forEach(o => { if (o.done && !used.has(o)) delta -= o.xp; });
+            if (delta) {
+                state.totalXP = Math.max(0, state.totalXP + delta);
+                const rec = state.days[state.day];
+                if (rec) rec.xp = Math.max(0, rec.xp + delta);
+            }
+            const rec = state.days[state.day];
+            if (rec) rec.complete = state.habits.every(h => h.done);
+            state.routine = key;
+            state.habitsVersion = HABITS_VERSION;
         }
 
         // byUser = el cambio lo hizo la persona (marcar, registrar…). Solo esos cambios
@@ -1037,19 +1168,22 @@
 
         function save() { persist(true); render(); }
 
-        // Nuevo día → hábitos en blanco.
+        // Nuevo día → la rutina de ese día, en blanco.
         function rollover() {
             const today = dayKey();
             if (state.day !== today) {
-                state.habits.forEach(h => h.done = false);
                 state.day = today;
+                state.routine = routineFor(today);
+                state.habits = freshHabits(today);
+                state.habitsVersion = HABITS_VERSION;
                 persist();
                 return true;
             }
             return false;
         }
 
-        const coins = () => state.totalXP - state.spentXP;
+        const coins = () => Math.floor((state.totalXP - state.spentXP) / XP_PER_GOLD);
+        const perfectDays = gold => (gold / PERFECT_DAY_GOLD).toLocaleString('es-CO', { maximumFractionDigits: 1 });
         const dayMaxXP = () => state.habits.reduce((a, h) => a + h.xp, 0);
 
         // Un día protegido con el Escudo del Dragón no suma a la racha, pero tampoco la rompe.
@@ -1077,7 +1211,7 @@
         }
 
         // ================= Escudo del Dragón =================
-        const SHIELD = { cost: 500, max: 2, cooldownDays: 7 };
+        const SHIELD = { cost: 50, max: 2, cooldownDays: 7 };   // cost en oro
 
         // Día (hoy o ayer) del último escudo usado dentro de la ventana de 7 días, o null.
         function lastShieldUse() {
@@ -1102,7 +1236,7 @@
 
         function buyShield() {
             if (coins() < SHIELD.cost || (state.shields || 0) >= SHIELD.max) return;
-            state.spentXP += SHIELD.cost;
+            state.spentXP += SHIELD.cost * XP_PER_GOLD;
             state.shields = (state.shields || 0) + 1;
             toast(`🛡️ Escudo del Dragón comprado · −${fmtNum(SHIELD.cost)} oro`);
             save();
@@ -1113,7 +1247,7 @@
             const label = k === dayKey() ? 'HOY' : `AYER (${shortDate(k)})`;
             const msg = via === '10k'
                 ? `🏃 REDENCIÓN 10K\n\n¿Corriste 10 km HOY, de verdad y completos?\n\nSi es así, AYER (${shortDate(k)}) queda protegido: la racha no se rompe, aunque ese día no suma.`
-                : `¿Usar un Escudo del Dragón para proteger ${label}?\n\nLa racha no se rompe, pero ese día no suma. Si al final completas los 7 hábitos, el escudo te vuelve.`;
+                : `¿Usar un Escudo del Dragón para proteger ${label}?\n\nLa racha no se rompe, pero ese día no suma. Si al final completas todos los hábitos, el escudo te vuelve.`;
             if (!confirm(msg)) return;
             if (via === 'shield') state.shields--;
             state.days[k] = { xp: 0, complete: false, ...state.days[k], shielded: true, via };
@@ -1163,7 +1297,7 @@
         function claimReward(id) {
             const r = state.rewards.find(x => x.id === id);
             if (!r || coins() < r.cost) return;
-            state.spentXP += r.cost;
+            state.spentXP += r.cost * XP_PER_GOLD;
             r.times = (r.times || 0) + 1;
             toast(`${r.icon || '🎁'} ¡${esc(r.title)} canjeado! −${fmtNum(r.cost)} oro`);
             save();
@@ -1298,6 +1432,7 @@
             const total = state.habits.length;
             const todayXP = state.days[dayKey()]?.xp || 0;
             $('ring-text').textContent = `${done}/${total}`;
+            $('routine-tag').textContent = `Rutina de hoy: ${ROUTINES[state.routine]?.name || ''}`;
             $('ring-fill').style.strokeDashoffset = 97.4 * (1 - (total ? done / total : 0));
             $('today-xp').textContent = `${todayXP} / ${dayMaxXP()} XP`;
             $('full-counter').classList.toggle('show', total > 0 && done === total);
@@ -1499,20 +1634,20 @@
                     </div>
                     <div class="bar" style="height:6px"><div class="bar-fill" style="width:${Math.min(100, (c / SHIELD.cost) * 100)}%"></div></div>
                     <div class="reward-foot">
-                        <div><div class="reward-cost">🪙 ${fmtNum(SHIELD.cost)}</div><div class="reward-times">En inventario: ${have} / ${SHIELD.max}${!full && c < SHIELD.cost ? ` · Faltan ${fmtNum(SHIELD.cost - c)}` : ''}</div></div>
+                        <div><div class="reward-cost">🪙 ${fmtNum(SHIELD.cost)} <span class="reward-days">≈ ${perfectDays(SHIELD.cost)} días perfectos</span></div><div class="reward-times">En inventario: ${have} / ${SHIELD.max}${!full && c < SHIELD.cost ? ` · Faltan ${fmtNum(SHIELD.cost - c)}` : ''}</div></div>
                         <button class="gold-btn" id="buy-shield" ${canShield ? '' : 'disabled'}>${full ? 'Lleno' : 'Comprar'}</button>
                     </div>
                 </div>`;
-            $('rewards-list').innerHTML = shieldCard + state.rewards.map(r => {
+            $('rewards-list').innerHTML = shieldCard + [...state.rewards].sort((a, b) => a.cost - b.cost).map(r => {
                 const can = c >= r.cost;
-                return `<div class="panel reward">
+                return `<div class="panel reward ${r.cost >= 1000 ? 'grand' : ''}">
                     <div class="reward-top">
                         <div class="reward-ico">${r.icon || '🎁'}</div>
                         <div><div class="reward-title">${esc(r.title)}</div>${r.desc ? `<div class="reward-desc">${esc(r.desc)}</div>` : ''}</div>
                     </div>
                     <div class="bar" style="height:6px"><div class="bar-fill" style="width:${Math.min(100, (c / r.cost) * 100)}%"></div></div>
                     <div class="reward-foot">
-                        <div><div class="reward-cost">🪙 ${fmtNum(r.cost)}</div><div class="reward-times">${r.times ? `Canjeado ${r.times}×` : can ? '¡Disponible!' : `Faltan ${fmtNum(r.cost - c)}`}</div></div>
+                        <div><div class="reward-cost">🪙 ${fmtNum(r.cost)} <span class="reward-days">≈ ${perfectDays(r.cost)} días perfectos</span></div><div class="reward-times">${[r.times ? `Canjeado ${r.times}×` : '', can ? '¡Disponible!' : `Faltan ${fmtNum(r.cost - c)}`].filter(Boolean).join(' · ')}</div></div>
                         <button class="gold-btn" data-claim="${r.id}" ${can ? '' : 'disabled'}>Canjear</button>
                     </div>
                 </div>`;
