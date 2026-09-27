@@ -887,7 +887,7 @@
         // La app elige la rutina según el día. "key" identifica el mismo hábito entre rutinas
         // (si cambia la rutina a mitad del día, lo ya marcado se conserva).
         // Si cambias alguna lista, sube HABITS_VERSION para que se aplique a los datos guardados.
-        const HABITS_VERSION = 3;
+        const HABITS_VERSION = 4;
         const ROUTINES = {
             weekday: {
                 name: 'Lunes a viernes · Jornada del Caballero',
@@ -947,7 +947,7 @@
                     { id: 201, key: 'wake',     time: '06:00 – 08:00', sin: 'orgullo',  xp: 15, text: 'Despertar sin posponer + agua',
                       detail: 'Domingo flexible: entre 6 y 8 · cero celular la primera hora',
                       quote: 'Hasta el sol del domingo sale con calma.' },
-                    { id: 202, key: 'home',     time: 'Mañana',        sin: 'pereza',   xp: 25, text: 'Hogar en orden',
+                    { id: 202, key: 'home',     time: 'Mañana',        sin: 'pereza',   xp: 30, text: 'Hogar en orden',
                       detail: 'Lavar ropa · barrer · trapear · limpiar baños',
                       quote: 'King vence la pereza hasta en su bosque.' },
                     { id: 203, key: 'food',     time: 'Todo el día',   sin: 'gula',     xp: 20, text: 'Nutrición de volumen: las 6 comidas',
@@ -956,7 +956,7 @@
                     { id: 204, key: 'mealprep', time: 'Mañana',        sin: 'gula',     xp: 15, text: 'Meal prep: comidas de la semana',
                       detail: 'Deja listos los snacks de las 10:00 y los almuerzos de lunes y martes',
                       quote: 'Merlin prepara las pociones antes de la batalla.' },
-                    { id: 205, key: 'family',   time: 'Tu horario',    sin: 'envidia',  xp: 25, text: 'Familia: visitar a papá + llamar a la abuela',
+                    { id: 205, key: 'family',   time: 'Tu horario',    sin: 'envidia',  xp: 30, text: 'Familia: visitar a papá + llamar a la abuela',
                       detail: 'Tiempo de calidad, sin celular en la mesa',
                       quote: 'Los gigantes cuidan a los suyos.' },
                     { id: 206, key: 'read',     time: 'Tu horario',    sin: 'lujuria',  xp: 10, text: 'Lectura por gusto (30 min)',
@@ -968,9 +968,6 @@
                     { id: 208, key: 'rest',     time: 'Tu horario',    sin: 'orgullo',  xp: 10, text: 'Descanso activo',
                       detail: 'Caminata de 30–40 min o estiramientos · sin pesas',
                       quote: 'Hasta Escanor descansa para volver más fuerte.' },
-                    { id: 209, key: 'noscreen', time: 'Tarde',         sin: 'lujuria',  xp: 10, text: 'Una hora sin pantallas',
-                      detail: 'Celular y PC lejos: afuera, familia, lectura o descanso',
-                      quote: 'La mente también se recupera.' },
                     { id: 210, key: 'vape',     time: 'Todo el día',   sin: 'avaricia', xp: 20, text: 'Cero Vape / Cero Marihuana (Día limpio)',
                       detail: 'Domingo de descanso, no de recaída.',
                       quote: 'Ban resiste cualquier tentación. Cuerpo limpio.' },
