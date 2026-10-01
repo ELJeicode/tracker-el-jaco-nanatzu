@@ -346,6 +346,19 @@
         .wd-cell.shielded::after { content: '🛡️'; position: absolute; top: 4px; left: 0; right: 0; font-size: 14px; }
         .wd-cell.shielded.run::after { content: '🏃'; }
 
+        .streak-info {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+            margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
+        }
+        .streak-box { padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); min-width: 0; }
+        .streak-box-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+        .streak-box-val { font-family: var(--display); font-weight: 900; font-size: 16px; margin-top: 3px; color: var(--gold-2); }
+        .streak-box-note { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+        .streak-meter { display: flex; gap: 3px; margin-top: 7px; }
+        .streak-meter span { flex: 1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); }
+        .streak-meter span.on { background: linear-gradient(90deg, var(--crimson), var(--gold)); }
+        @media (max-width: 640px) { .streak-info { grid-template-columns: 1fr; } }
+
         .shield-bar {
             display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
             margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
@@ -687,6 +700,7 @@
             <div class="full-counter" id="full-counter">
                 ✦ FULL COUNTER — DÍA DOMINADO ✦
                 <small>Los siete pecados se inclinan ante tu disciplina. La racha del Dragón sigue viva.</small>
+                <small id="full-counter-bonus"></small>
             </div>
 
             <div class="panel week">
@@ -695,6 +709,7 @@
                     <div class="week-best" id="week-best"></div>
                 </div>
                 <div class="week-days" id="week-days"></div>
+                <div class="streak-info" id="streak-info"></div>
                 <div class="shield-bar" id="shield-bar"></div>
             </div>
 
@@ -1178,7 +1193,33 @@
             return false;
         }
 
-        const coins = () => Math.floor((state.totalXP - state.spentXP) / XP_PER_GOLD);
+        // ================= Bono de racha =================
+        // Al completar un día, la racha (n = días seguidos, contando hoy) da:
+        //   oro extra = 0,5 × n (tope +5 desde el día 10) · XP extra = +0,5 % × n (tope +10 % desde el día 20)
+        // y, al llegar exactamente a un hito, un premio único por racha.
+        // Con rachas perfectas: la DT 175 llega en ~64 días (sin bono 95) y el Rey Arturo en ~506 (sin bono 556).
+        const STREAK_BONUS = { goldStep: 0.5, goldMaxDays: 10, xpStep: 0.005, xpMaxDays: 20 };
+        const STREAK_MILESTONES = [
+            { days: 7,   shield: 1,             label: '🛡️ Escudo del Dragón gratis' },
+            { days: 14,  gold: 25,              label: '+25 de oro' },
+            { days: 30,  gold: 50,  shield: 1,  label: '+50 de oro y 🛡️ Escudo' },
+            { days: 60,  gold: 100,             label: '+100 de oro' },
+            { days: 100, gold: 200,             label: '+200 de oro' },
+            { days: 180, gold: 300,             label: '+300 de oro' },
+            { days: 365, gold: 500,             label: '+500 de oro' }
+        ];
+        const SHIELD_FULL_GOLD = 25;   // si el hito da escudo pero el inventario está lleno
+
+        const streakBonus = (n, dayXP) => ({
+            gold: STREAK_BONUS.goldStep * Math.min(n, STREAK_BONUS.goldMaxDays),
+            xp: Math.round(dayXP * STREAK_BONUS.xpStep * Math.min(n, STREAK_BONUS.xpMaxDays)),
+            pct: Math.round(STREAK_BONUS.xpStep * Math.min(n, STREAK_BONUS.xpMaxDays) * 1000) / 10
+        });
+
+        // Oro total = (Poder − gastado) / 10 + oro de bonos de racha. Se cuenta en medias monedas.
+        const bonusGold = () => Object.values(state.days || {}).reduce((a, d) => a + (d.bonus?.gold || 0), 0);
+        const coins = () => Math.floor(((state.totalXP - state.spentXP) / XP_PER_GOLD + bonusGold()) * 2) / 2;
+        const fmtGold = n => n.toLocaleString('es-CO', { maximumFractionDigits: 1 });
         const perfectDays = gold => (gold / PERFECT_DAY_GOLD).toLocaleString('es-CO', { maximumFractionDigits: 1 });
         const dayMaxXP = () => state.habits.reduce((a, h) => a + h.xp, 0);
 
@@ -1279,7 +1320,37 @@
                 state.shields = (state.shields || 0) + 1;
                 toast('🛡️ Completaste el día: el escudo vuelve a tu inventario');
             }
+            if (rec.complete !== wasComplete) settleDayBonus(today);
             save();
+        }
+
+        // Da (si el día quedó completo) o devuelve (si dejó de estarlo) el bono de racha de ese día.
+        function settleDayBonus(k) {
+            const rec = state.days[k];
+            if (!rec) return;
+            if (rec.bonus) {
+                state.totalXP = Math.max(0, state.totalXP - (rec.bonus.xp || 0));
+                if (rec.bonus.shield) state.shields = Math.max(0, (state.shields || 0) - rec.bonus.shield);
+                delete rec.bonus;
+            }
+            if (!rec.complete) return;
+            const n = streak();
+            const b = streakBonus(n, rec.xp);
+            const m = STREAK_MILESTONES.find(x => x.days === n);
+            let shield = 0, gold = b.gold;
+            if (m) {
+                gold += m.gold || 0;
+                if (m.shield) {
+                    if ((state.shields || 0) < SHIELD.max) shield = m.shield;
+                    else gold += SHIELD_FULL_GOLD;
+                }
+            }
+            rec.bonus = { streak: n, xp: b.xp, gold, shield };
+            if (m) rec.bonus.milestone = n;
+            state.totalXP += b.xp;
+            state.shields = (state.shields || 0) + shield;
+            toast(`🐉 Bono de racha ×${n}: +${fmtGold(b.gold)} oro · +${b.xp} XP`);
+            if (m) toast(`🏆 ¡Hito de ${n} días! ${m.label}${m.shield && !shield ? ` (inventario lleno: +${SHIELD_FULL_GOLD} oro)` : ''}`);
         }
 
         function resetDay() {
@@ -1287,6 +1358,7 @@
             const today = dayKey();
             state.habits.forEach(h => { if (h.done) state.totalXP = Math.max(0, state.totalXP - h.xp); h.done = false; });
             state.days[today] = { ...state.days[today], xp: 0, complete: false };
+            settleDayBonus(today);
             save();
         }
 
@@ -1381,7 +1453,7 @@
             animatePower(state.totalXP);
 
             const s = streak();
-            $('power-sub').innerHTML = `Oro disponible <b>${fmtNum(coins())}</b><br>Ritmo <b>~${fmtNum(avgDailyXP())}</b> XP/día`;
+            $('power-sub').innerHTML = `Oro disponible <b>${fmtGold(coins())}</b><br>Ritmo <b>~${fmtNum(avgDailyXP())}</b> XP/día`;
 
             if (next) {
                 const pct = ((state.totalXP - cur.reqXP) / (next.reqXP - cur.reqXP)) * 100;
@@ -1402,7 +1474,7 @@
 
             $('streak-val').textContent = s;
             $('xp-val').textContent = fmtNum(state.totalXP);
-            $('coins-val').textContent = fmtNum(coins());
+            $('coins-val').textContent = fmtGold(coins());
 
             if (cur.level > state.lastRank) showLevelUp(cur);
             if (cur.level !== state.lastRank) { state.lastRank = cur.level; persist(); }
@@ -1449,7 +1521,34 @@
                 </div>`;
             }).join('');
             $('week-best').innerHTML = `Mejor racha: <b style="color:var(--gold-2)">${bestStreak()}</b> días`;
+            renderStreakInfo();
             renderShieldBar();
+        }
+
+        // Bono de racha: lo que da completar hoy (o lo que ya dio) y el próximo hito.
+        function renderStreakInfo() {
+            const rec = state.days[dayKey()];
+            const done = !!rec?.complete && !!rec.bonus;
+            const n = done ? rec.bonus.streak : streak() + 1;
+            const b = done ? { gold: rec.bonus.gold, xp: rec.bonus.xp, pct: streakBonus(n, 180).pct } : streakBonus(n, dayMaxXP());
+            const steps = STREAK_BONUS.goldMaxDays;
+            const meter = Array.from({ length: steps }, (_, i) => `<span class="${i < Math.min(n, steps) ? 'on' : ''}"></span>`).join('');
+            const next = STREAK_MILESTONES.find(m => m.days > (done ? n : n - 1));
+            $('streak-info').innerHTML = `
+                <div class="streak-box">
+                    <div class="streak-box-label">${done ? `Bono ganado hoy · racha ×${n}` : `Si completas hoy · racha ×${n}`}</div>
+                    <div class="streak-box-val">+${fmtGold(b.gold)} oro · +${b.xp} XP</div>
+                    <div class="streak-box-note">XP +${fmtGold(b.pct)} %${n >= STREAK_BONUS.xpMaxDays ? ' (máximo)' : ''} · oro ${n >= steps ? 'al máximo (+5/día)' : `sube 0,5 por día hasta +5`}</div>
+                    <div class="streak-meter">${meter}</div>
+                </div>
+                <div class="streak-box">
+                    <div class="streak-box-label">Próximo hito de racha</div>
+                    <div class="streak-box-val">${next ? `${next.days} días` : 'Todos los hitos logrados'}</div>
+                    <div class="streak-box-note">${next ? `${next.label} · ${(k => `falta${k === 1 ? "" : "n"} ${k} día${k === 1 ? "" : "s"} perfecto${k === 1 ? "" : "s"}`)(next.days - (done ? n : n - 1))}` : 'Eres leyenda del Dragón.'}</div>
+                </div>`;
+            $('full-counter-bonus').textContent = done
+                ? `Bono de racha ×${n}: +${fmtGold(rec.bonus.gold)} oro · +${rec.bonus.xp} XP${rec.bonus.milestone ? ` · 🏆 Hito de ${n} días` : ''}`
+                : '';
         }
 
         // Botones del escudo: solo aparecen cuando hay una racha que salvar.
@@ -1630,7 +1729,7 @@
                     </div>
                     <div class="bar" style="height:6px"><div class="bar-fill" style="width:${Math.min(100, (c / SHIELD.cost) * 100)}%"></div></div>
                     <div class="reward-foot">
-                        <div><div class="reward-cost">🪙 ${fmtNum(SHIELD.cost)} <span class="reward-days">≈ ${perfectDays(SHIELD.cost)} días perfectos</span></div><div class="reward-times">En inventario: ${have} / ${SHIELD.max}${!full && c < SHIELD.cost ? ` · Faltan ${fmtNum(SHIELD.cost - c)}` : ''}</div></div>
+                        <div><div class="reward-cost">🪙 ${fmtNum(SHIELD.cost)} <span class="reward-days">≈ ${perfectDays(SHIELD.cost)} días perfectos</span></div><div class="reward-times">En inventario: ${have} / ${SHIELD.max}${!full && c < SHIELD.cost ? ` · Faltan ${fmtGold(SHIELD.cost - c)}` : ''}</div></div>
                         <button class="gold-btn" id="buy-shield" ${canShield ? '' : 'disabled'}>${full ? 'Lleno' : 'Comprar'}</button>
                     </div>
                 </div>`;
@@ -1643,7 +1742,7 @@
                     </div>
                     <div class="bar" style="height:6px"><div class="bar-fill" style="width:${Math.min(100, (c / r.cost) * 100)}%"></div></div>
                     <div class="reward-foot">
-                        <div><div class="reward-cost">🪙 ${fmtNum(r.cost)} <span class="reward-days">≈ ${perfectDays(r.cost)} días perfectos</span></div><div class="reward-times">${[r.times ? `Canjeado ${r.times}×` : '', can ? '¡Disponible!' : `Faltan ${fmtNum(r.cost - c)}`].filter(Boolean).join(' · ')}</div></div>
+                        <div><div class="reward-cost">🪙 ${fmtNum(r.cost)} <span class="reward-days">≈ ${perfectDays(r.cost)} días perfectos</span></div><div class="reward-times">${[r.times ? `Canjeado ${r.times}×` : '', can ? '¡Disponible!' : `Faltan ${fmtGold(r.cost - c)}`].filter(Boolean).join(' · ')}</div></div>
                         <button class="gold-btn" data-claim="${r.id}" ${can ? '' : 'disabled'}>Canjear</button>
                     </div>
                 </div>`;

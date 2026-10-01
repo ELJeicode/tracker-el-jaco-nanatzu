@@ -90,6 +90,8 @@ const SUPABASE_KEY = 'sb_publishable_zZojq41H3J2bzHwPC4Ti9Q_TYbMEAmK';
             };
             const via = pick(b?.via, l?.via, r?.via);
             if (out.days[k].shielded && via) out.days[k].via = via;
+            const bonus = pick(b?.bonus, l?.bonus, r?.bonus);   // bono de racha del día
+            if (bonus && out.days[k].complete) out.days[k].bonus = bonus;
         }
 
         if (L.day === R.day) {
