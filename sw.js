@@ -1,10 +1,11 @@
 // Service worker: permite instalar la app y usarla sin internet.
 // Sube CACHE cuando cambies archivos para forzar la actualización en el celular.
-const CACHE = 'nanatsu-v14';
+const CACHE = 'nanatsu-v15';
 const APP = ['./', './index.html', './niveles.js', './sync.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
-    e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
+    // cache: 'reload' → baja los archivos frescos, sin usar la caché de 10 min de GitHub Pages.
+    e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -23,7 +24,7 @@ self.addEventListener('fetch', e => {
     // Archivos propios: primero la red (para recibir actualizaciones), si no hay internet, la copia guardada.
     if (url.origin === location.origin) {
         e.respondWith(
-            fetch(req)
+            fetch(req, { cache: 'no-cache' })   // siempre confirma con GitHub que es la versión más nueva
                 .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })
                 .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
         );

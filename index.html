@@ -1131,6 +1131,12 @@
             if (typeof state.updatedAt !== 'number') state.updatedAt = 0;
             if (typeof state.shields !== 'number') state.shields = 0;
             if (!state.day) state.day = dayKey();
+            // Datos guardados por una versión MÁS NUEVA de la app (este código es viejo, p. ej. de caché):
+            // no se tocan para no volver a la lista vieja; se pide la versión nueva.
+            if ((state.habitsVersion || 0) > HABITS_VERSION || (state.rewardsVersion || 0) > REWARDS_VERSION) {
+                navigator.serviceWorker?.getRegistration().then(r => r && r.update()).catch(() => {});
+                return;
+            }
             // Rutina distinta a la del día (o lista actualizada) → se cambia conservando lo ya marcado.
             if (state.habitsVersion !== HABITS_VERSION || state.routine !== routineFor(state.day)) applyRoutine();
             // Menú de recompensas actualizado → precios nuevos, se conservan los canjes hechos.
@@ -1904,6 +1910,16 @@
         // App instalable + modo sin internet (solo funciona servida por https o localhost, no con doble clic).
         if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
             navigator.serviceWorker.register('sw.js').catch(() => {});
+            // Cuando entra una versión nueva de la app, se recarga una vez para usar el código nuevo.
+            const hadController = !!navigator.serviceWorker.controller;
+            let reloaded = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (hadController && !reloaded) { reloaded = true; location.reload(); }
+            });
+            // Al volver a la app, revisa si hay versión nueva.
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+            });
         }
     </script>
 </body>
