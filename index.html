@@ -346,6 +346,55 @@
         .wd-cell.shielded::after { content: '🛡️'; position: absolute; top: 4px; left: 0; right: 0; font-size: 14px; }
         .wd-cell.shielded.run::after { content: '🏃'; }
 
+        /* ---------- Calendario ---------- */
+        .week-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .cal-btn { padding: 6px 10px; font-size: 12px; }
+        .cal-btn:hover { color: var(--gold-2); border-color: var(--line-strong); }
+        .cal-card { width: min(560px, 100%); text-align: left; max-height: calc(100vh - 32px); overflow-y: auto; overflow-x: hidden; }
+        .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+        .cal-title { font-family: var(--display); font-weight: 900; font-size: 20px; text-transform: capitalize; text-align: center; flex: 1; }
+        .cal-nav { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); font-size: 22px; color: var(--gold-2); }
+        .cal-nav:hover:not(:disabled) { border-color: var(--line-strong); background: rgba(212, 175, 55, 0.08); }
+        .cal-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+        .cal-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+        .cal-stat { padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); min-width: 0; }
+        .cal-stat b { display: block; font-family: var(--display); font-size: 17px; color: var(--gold-2); font-variant-numeric: tabular-nums; }
+        .cal-stat span { font-size: 10.5px; color: var(--muted); letter-spacing: 0.06em; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+        .cal-weekdays { margin-bottom: 5px; }
+        .cal-weekdays span { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.1em; }
+        .cal-day {
+            position: relative; aspect-ratio: 1; border-radius: 9px; overflow: hidden;
+            background: rgba(0, 0, 0, 0.4); border: 1px solid var(--line);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+            font-variant-numeric: tabular-nums; transition: border-color 0.15s;
+        }
+        button.cal-day:hover { border-color: var(--line-strong); }
+        .cal-day .n { position: relative; z-index: 1; font-size: 13px; font-weight: 700; }
+        .cal-day .ic { position: relative; z-index: 1; font-size: 12px; line-height: 1; min-height: 12px; }
+        .cal-day .fill { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(0deg, rgba(192, 38, 45, 0.7), rgba(212, 175, 55, 0.55)); }
+        .cal-day.done { border-color: var(--gold); background: linear-gradient(160deg, rgba(212, 175, 55, 0.45), rgba(192, 38, 45, 0.45)); }
+        .cal-day.shield { border-color: #7dd3fc; border-style: dashed; background: rgba(125, 211, 252, 0.1); }
+        .cal-day.run { border-color: var(--emerald); background: rgba(52, 211, 153, 0.1); }
+        .cal-day.future { opacity: 0.3; }
+        .cal-day.blank { visibility: hidden; }
+        .cal-day.today { outline: 2px solid var(--gold-2); outline-offset: 1px; }
+        .cal-day.selected { box-shadow: 0 0 0 2px var(--text) inset; }
+        .cal-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 11.5px; color: var(--muted); }
+        .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .lg { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+        .lg-done { background: linear-gradient(160deg, var(--gold), var(--crimson)); border-color: var(--gold); }
+        .lg-part { background: linear-gradient(0deg, rgba(192, 38, 45, 0.7) 50%, rgba(0, 0, 0, 0.4) 50%); }
+        .lg-shield { border: 1px dashed #7dd3fc; background: rgba(125, 211, 252, 0.15); }
+        .lg-none { background: rgba(0, 0, 0, 0.4); }
+        .cal-detail { text-align: left; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); font-size: 13px; color: var(--muted); line-height: 1.55; }
+        .cal-detail b { color: var(--text); }
+        @media (max-width: 640px) {
+            .cal-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .cal-day .n { font-size: 12px; }
+            .cal-day .ic { font-size: 10px; min-height: 10px; }
+        }
+
         .streak-info {
             display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
             margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
@@ -706,7 +755,10 @@
             <div class="panel week">
                 <div class="week-head">
                     <div class="week-title">Últimos 7 días</div>
-                    <div class="week-best" id="week-best"></div>
+                    <div class="week-actions">
+                        <div class="week-best" id="week-best"></div>
+                        <button class="ghost-btn cal-btn" id="cal-open" type="button">📅 Calendario</button>
+                    </div>
                 </div>
                 <div class="week-days" id="week-days"></div>
                 <div class="streak-info" id="streak-info"></div>
@@ -841,6 +893,28 @@
             <div class="modal-title" id="lu-title"></div>
             <p class="modal-desc" id="lu-desc"></p>
             <button class="gold-btn" id="lu-close">Aceptar el poder</button>
+        </div>
+    </div>
+
+    <!-- Calendario del tracker -->
+    <div class="modal" id="cal-modal" role="dialog" aria-modal="true" aria-labelledby="cal-title">
+        <div class="panel ornate modal-card cal-card">
+            <div class="cal-head">
+                <button class="cal-nav" id="cal-prev" type="button" aria-label="Mes anterior">‹</button>
+                <div class="cal-title" id="cal-title"></div>
+                <button class="cal-nav" id="cal-next" type="button" aria-label="Mes siguiente">›</button>
+            </div>
+            <div class="cal-summary" id="cal-summary"></div>
+            <div class="cal-grid cal-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+            <div class="cal-grid" id="cal-grid"></div>
+            <div class="cal-legend">
+                <span><i class="lg lg-done"></i>Perfecto</span>
+                <span><i class="lg lg-part"></i>Parcial</span>
+                <span><i class="lg lg-shield"></i>Protegido</span>
+                <span><i class="lg lg-none"></i>Sin registro</span>
+            </div>
+            <div class="cal-detail" id="cal-detail">Toca un día para ver su detalle.</div>
+            <button class="ghost-btn sync-close" type="button" id="cal-close">Cerrar</button>
         </div>
     </div>
 
@@ -1531,6 +1605,84 @@
             renderShieldBar();
         }
 
+        // ================= Calendario =================
+        let calMonth = dayKey().slice(0, 7);   // 'YYYY-MM' que se está viendo
+        let calSelected = null;
+
+        function openCalendar() {
+            calMonth = dayKey().slice(0, 7);
+            calSelected = null;
+            renderCalendar();
+            $('cal-modal').classList.add('show');
+        }
+
+        function shiftCalMonth(delta) {
+            const [y, m] = calMonth.split('-').map(Number);
+            const d = new Date(y, m - 1 + delta, 1);
+            const next = `${d.getFullYear()}-${z(d.getMonth() + 1)}`;
+            if (next > dayKey().slice(0, 7)) return;   // no se navega al futuro
+            calMonth = next;
+            calSelected = null;
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const [y, m] = calMonth.split('-').map(Number);
+            const today = dayKey();
+            const first = new Date(y, m - 1, 1);
+            const total = new Date(y, m, 0).getDate();
+            const offset = (first.getDay() + 6) % 7;   // la semana empieza el lunes
+            $('cal-title').textContent = first.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+            $('cal-next').disabled = calMonth >= today.slice(0, 7);
+
+            let perfect = 0, xp = 0, gold = 0, protectedDays = 0, run = 0, bestRun = 0;
+            let cells = '<div class="cal-day blank"></div>'.repeat(offset);
+            for (let day = 1; day <= total; day++) {
+                const k = `${calMonth}-${z(day)}`;
+                const d = state.days[k];
+                const future = k > today;
+                const done = isDone(k), shielded = isShielded(k);
+                if (done) perfect++;
+                if (shielded) protectedDays++;
+                xp += (d?.xp || 0) + (d?.bonus?.xp || 0);
+                gold += d?.bonus?.gold || 0;
+                if (done) { run++; bestRun = Math.max(bestRun, run); } else if (!shielded && k < today) run = 0;
+                const cls = ['cal-day', done ? 'done' : '', shielded ? (d.via === '10k' ? 'run' : 'shield') : '',
+                    future ? 'future' : '', k === today ? 'today' : '', k === calSelected ? 'selected' : ''].join(' ');
+                const icon = done ? (d?.bonus?.milestone ? '🏆' : '🐉') : shielded ? (d.via === '10k' ? '🏃' : '🛡️') : '';
+                const fill = !done && !shielded && d?.xp ? `<div class="fill" style="height:${Math.min(100, (d.xp / 180) * 100)}%"></div>` : '';
+                cells += future
+                    ? `<div class="${cls}"><span class="n">${day}</span></div>`
+                    : `<button type="button" class="${cls}" data-cal="${k}">${fill}<span class="n">${day}</span><span class="ic">${icon}</span></button>`;
+            }
+            $('cal-grid').innerHTML = cells;
+            $('cal-summary').innerHTML = `
+                <div class="cal-stat"><b>${perfect}</b><span>Días perfectos</span></div>
+                <div class="cal-stat"><b>${fmtNum(xp)}</b><span>XP del mes</span></div>
+                <div class="cal-stat"><b>${bestRun}</b><span>Mejor racha del mes</span></div>
+                <div class="cal-stat"><b>+${fmtGold(gold)}</b><span>Oro de bonos</span></div>`;
+            renderCalDetail();
+        }
+
+        function renderCalDetail() {
+            const k = calSelected;
+            if (!k) { $('cal-detail').innerHTML = 'Toca un día para ver su detalle.'; return; }
+            const d = state.days[k] || {};
+            const date = new Date(k + 'T12:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+            const routine = ROUTINES[routineFor(k)].name;
+            const status = isDone(k) ? '🐉 Día perfecto'
+                : isShielded(k) ? (d.via === '10k' ? '🏃 Redimido con 10K' : '🛡️ Protegido con escudo')
+                : d.xp ? 'Incompleto' : 'Sin registro';
+            const weight = state.weights.find(w => w.date === k);
+            const parts = [
+                `<b style="text-transform:capitalize">${date}</b> · ${routine}`,
+                `${status} · <b>${fmtNum(d.xp || 0)} XP</b> de hábitos`
+            ];
+            if (d.bonus) parts.push(`Bono de racha ×${d.bonus.streak}: <b>+${fmtGold(d.bonus.gold)} oro · +${d.bonus.xp} XP</b>${d.bonus.milestone ? ` · 🏆 Hito de ${d.bonus.milestone} días` : ''}`);
+            if (weight) parts.push(`⚖️ Peso: <b>${kgFmt(weight.kg)} kg</b>`);
+            $('cal-detail').innerHTML = parts.join('<br>');
+        }
+
         // Bono de racha: lo que da completar hoy (o lo que ya dio) y el próximo hito.
         function renderStreakInfo() {
             const rec = state.days[dayKey()];
@@ -1879,6 +2031,18 @@
             const b = e.target.closest('[data-claim]');
             if (b) claimReward(Number(b.dataset.claim));
         });
+        $('cal-open').addEventListener('click', openCalendar);
+        $('cal-close').addEventListener('click', () => $('cal-modal').classList.remove('show'));
+        $('cal-prev').addEventListener('click', () => shiftCalMonth(-1));
+        $('cal-next').addEventListener('click', () => shiftCalMonth(1));
+        $('cal-grid').addEventListener('click', e => {
+            const b = e.target.closest('[data-cal]');
+            if (!b) return;
+            calSelected = b.dataset.cal;
+            renderCalendar();
+        });
+        $('cal-modal').addEventListener('click', e => { if (e.target === $('cal-modal')) $('cal-modal').classList.remove('show'); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') $('cal-modal').classList.remove('show'); });
         $('shield-bar').addEventListener('click', e => { const b = e.target.closest('[data-shield]'); if (b && !b.disabled) useShield(b.dataset.shield, b.dataset.via); });
         document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
         $('reset-day').addEventListener('click', resetDay);
