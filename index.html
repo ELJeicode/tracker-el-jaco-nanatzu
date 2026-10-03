@@ -1214,6 +1214,12 @@
             if (typeof state.updatedAt !== 'number') state.updatedAt = 0;
             if (typeof state.shields !== 'number') state.shields = 0;
             if (!state.day) state.day = dayKey();
+            // Historial del día en curso: si falta (marcas hechas antes de existir el historial), se arma
+            // con las marcas actuales. Corre antes del cambio de día, así el día que termina queda con su lista.
+            const cur = state.days[state.day];
+            if (cur && !Array.isArray(cur.done) && Array.isArray(state.habits) && state.habitsVersion === HABITS_VERSION) {
+                cur.done = state.habits.filter(h => h.done).map(h => h.key || LEGACY_KEYS[h.id]);
+            }
             // Datos guardados por una versión MÁS NUEVA de la app (este código es viejo, p. ej. de caché):
             // no se tocan para no volver a la lista vieja; se pide la versión nueva.
             if ((state.habitsVersion || 0) > HABITS_VERSION || (state.rewardsVersion || 0) > REWARDS_VERSION) {
@@ -1761,9 +1767,11 @@
             ];
             if (d.bonus) parts.push(`Bono de racha ×${d.bonus.streak}: <b>+${fmtGold(d.bonus.gold)} oro · +${d.bonus.xp} XP</b>${d.bonus.milestone ? ` · 🏆 Hito de ${d.bonus.milestone} días` : ''}`);
             if (weight) parts.push(`⚖️ Peso: <b>${kgFmt(weight.kg)} kg</b>`);
-            if (Array.isArray(d.done)) {
+            // Hoy: lo que está marcado ahora mismo. Días pasados: lo que quedó guardado.
+            const doneKeys = k === dayKey() ? state.habits.filter(h => h.done).map(h => h.key) : d.done;
+            if (Array.isArray(doneKeys)) {
                 const list = ROUTINES[routineFor(k)].habits;
-                parts.push('<span class="cal-habits">' + list.map(h => `${d.done.includes(h.key) ? '✓' : '✗'} ${esc(h.text)}`).join('<br>') + '</span>');
+                parts.push('<span class="cal-habits">' + list.map(h => `${doneKeys.includes(h.key) ? '✓' : '✗'} ${esc(h.text)}`).join('<br>') + '</span>');
             }
             if (d.corrected) parts.push(`<i>✏️ Este día fue corregido${d.correction ? ` (tenía ${d.correction.xp} XP)` : ''}.</i>`);
 
