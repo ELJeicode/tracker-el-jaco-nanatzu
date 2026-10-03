@@ -1685,14 +1685,13 @@
         const CORRECT_WINDOW_DAYS = 7;
         let calEdit = false;
 
-        const canCorrect = k => k < dayKey() && k >= addDays(dayKey(), -CORRECT_WINDOW_DAYS) && (state.days[k]?.xp || 0) > 0;
+        // Solo se corrigen días con historial de hábitos y solo se pueden quitar los que quedaron marcados.
+        const canCorrect = k => k < dayKey() && k >= addDays(dayKey(), -CORRECT_WINDOW_DAYS)
+            && Array.isArray(state.days[k]?.done) && state.days[k].done.length > 0;
 
-        // Hábitos que se pueden quitar: los registrados ese día; si el día es anterior al historial,
-        // todos los de su rutina (la XP quitada nunca baja de 0).
         function correctableHabits(k) {
-            const list = ROUTINES[routineFor(k)].habits;
-            const done = state.days[k]?.done;
-            return Array.isArray(done) ? list.filter(h => done.includes(h.key)) : list;
+            const done = state.days[k]?.done || [];
+            return ROUTINES[routineFor(k)].habits.filter(h => done.includes(h.key));
         }
 
         function correctDay(k, keys) {
@@ -1702,6 +1701,8 @@
             const remove = Math.min(rec.xp, habits.reduce((a, h) => a + h.xp, 0));
             const names = habits.map(h => '· ' + h.text).join('\n');
             if (!confirm(`¿Quitar estos hábitos del ${shortDate(k)}?\n\n${names}\n\n−${remove} XP. El día queda incompleto${rec.bonus ? ' y se devuelve su bono de racha' : ''}.`)) return;
+            // Copia de cómo estaba el día, para poder deshacer.
+            rec.correction = { xp: rec.xp, complete: rec.complete, done: Array.isArray(rec.done) ? [...rec.done] : null, removed: remove };
             if (rec.bonus) {
                 state.totalXP = Math.max(0, state.totalXP - (rec.bonus.xp || 0));
                 if (rec.bonus.shield) state.shields = Math.max(0, (state.shields || 0) - rec.bonus.shield);
@@ -1717,6 +1718,52 @@
                 if (state.days[d]?.complete) settleDayBonus(d, true);
             }
             toast(`✏️ ${shortDate(k)} corregido: −${remove} XP`);
+            calEdit = false;
+            save();
+            renderCalendar();
+        }
+
+        // Deshace la última corrección de un día: devuelve la XP quitada y recalcula bonos y racha.
+        function undoCorrection(k) {
+            const rec = state.days[k];
+            const c = rec?.correction;
+            if (!c) return;
+            if (!confirm(`¿Deshacer la corrección del ${shortDate(k)}?\n\nEl día vuelve a quedar con ${c.xp} XP, como estaba antes de corregirlo.`)) return;
+            state.totalXP += c.removed;
+            rec.xp = c.xp;
+            rec.complete = c.complete;
+            if (c.done) rec.done = c.done; else delete rec.done;
+            delete rec.correction;
+            delete rec.corrected;
+            if (rec.complete) settleDayBonus(k, true);
+            for (let d = addDays(k, 1); d <= dayKey(); d = addDays(d, 1)) {
+                if (state.days[d]?.complete) settleDayBonus(d, true);
+            }
+            toast(`↩️ ${shortDate(k)} restaurado: ${c.xp} XP`);
+            calEdit = false;
+            save();
+            renderCalendar();
+        }
+
+        // Para correcciones hechas antes de existir "deshacer": devuelve la XP de los hábitos elegidos (una vez).
+        function restoreHabits(k, keys) {
+            const rec = state.days[k];
+            if (!rec || !keys.length) return;
+            const list = ROUTINES[routineFor(k)].habits;
+            const max = list.reduce((a, h) => a + h.xp, 0);
+            const chosen = list.filter(h => keys.includes(h.key));
+            const add = Math.min(max - rec.xp, chosen.reduce((a, h) => a + h.xp, 0));
+            if (add <= 0) return toast('Ese día ya tiene la XP máxima');
+            if (!confirm(`¿Devolver estos hábitos al ${shortDate(k)}?\n\n${chosen.map(h => '· ' + h.text).join('\n')}\n\n+${add} XP. Solo se puede hacer una vez en este día.`)) return;
+            rec.xp += add;
+            state.totalXP += add;
+            rec.restored = true;
+            rec.complete = rec.xp >= max;
+            if (rec.complete) settleDayBonus(k, true);
+            for (let d = addDays(k, 1); d <= dayKey(); d = addDays(d, 1)) {
+                if (state.days[d]?.complete) settleDayBonus(d, true);
+            }
+            toast(`↩️ ${shortDate(k)}: +${add} XP devueltos`);
             calEdit = false;
             save();
             renderCalendar();
@@ -1742,18 +1789,38 @@
                 const list = ROUTINES[routineFor(k)].habits;
                 parts.push('<span class="cal-habits">' + list.map(h => `${d.done.includes(h.key) ? '✓' : '✗'} ${esc(h.text)}`).join('<br>') + '</span>');
             }
-            if (d.corrected) parts.push('<i>✏️ Este día fue corregido.</i>');
+            if (d.corrected) parts.push(`<i>✏️ Este día fue corregido${d.correction ? ` (tenía ${d.correction.xp} XP)` : ''}.</i>`);
 
             let edit = '';
-            if (canCorrect(k)) {
+            const inWindow = k < dayKey() && k >= addDays(dayKey(), -CORRECT_WINDOW_DAYS);
+            if (d.correction && inWindow && !calEdit) {
+                edit += `<button type="button" class="ghost-btn cal-edit-btn" id="cal-undo">↩️ Deshacer corrección</button> `;
+            }
+            // Corrección hecha con la versión anterior (sin copia para deshacer): se permite devolver
+            // hábitos quitados por error UNA sola vez, sin pasar de la XP máxima del día.
+            const legacy = d.corrected && !d.correction && !d.restored && inWindow;
+            if (legacy && calEdit === 'restore') {
+                const room = ROUTINES[routineFor(k)].habits.reduce((a, h) => a + h.xp, 0) - (d.xp || 0);
+                edit = `<div class="cal-edit">
+                    <div class="cal-edit-title">Marca los hábitos que <b>SÍ</b> hiciste y se quitaron por error:</div>
+                    ${ROUTINES[routineFor(k)].habits.map(h => `<label class="cal-check"><input type="checkbox" value="${h.key}"> ${esc(h.text)} <span style="color:var(--emerald)">+${h.xp} XP</span></label>`).join('')}
+                    <div class="cal-edit-note">Solo se puede usar una vez en este día · máximo +${room} XP.</div>
+                    <div class="cal-edit-actions">
+                        <button type="button" class="gold-btn" id="cal-restore-apply">Devolver seleccionados</button>
+                        <button type="button" class="ghost-btn" id="cal-edit-cancel">Cancelar</button>
+                    </div>
+                </div>`;
+            } else if (legacy && !calEdit) {
+                edit += `<button type="button" class="ghost-btn cal-edit-btn" id="cal-restore">↩️ Devolver hábitos quitados por error</button> `;
+            }
+            if (canCorrect(k) && calEdit !== 'restore') {
                 if (!calEdit) {
-                    edit = `<button type="button" class="ghost-btn cal-edit-btn" id="cal-edit">✏️ Corregir este día</button>`;
+                    edit += `<button type="button" class="ghost-btn cal-edit-btn" id="cal-edit">✏️ Corregir este día</button>`;
                 } else {
                     const options = correctableHabits(k);
                     edit = `<div class="cal-edit">
                         <div class="cal-edit-title">Marca los hábitos que <b>NO</b> hiciste:</div>
                         ${options.map(h => `<label class="cal-check"><input type="checkbox" value="${h.key}"> ${esc(h.text)} <span>−${h.xp} XP</span></label>`).join('')}
-                        ${Array.isArray(d.done) ? '' : '<div class="cal-edit-note">Este día es anterior al historial de hábitos: elige con cuidado.</div>'}
                         <div class="cal-edit-actions">
                             <button type="button" class="gold-btn" id="cal-edit-apply">Quitar seleccionados</button>
                             <button type="button" class="ghost-btn" id="cal-edit-cancel">Cancelar</button>
@@ -2124,7 +2191,14 @@
             renderCalendar();
         });
         $('cal-detail').addEventListener('click', e => {
-            if (e.target.closest('#cal-edit')) { calEdit = true; renderCalDetail(); }
+            if (e.target.closest('#cal-undo')) undoCorrection(calSelected);
+            else if (e.target.closest('#cal-restore')) { calEdit = 'restore'; renderCalDetail(); }
+            else if (e.target.closest('#cal-restore-apply')) {
+                const keys = [...$('cal-detail').querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);
+                if (!keys.length) return toast('Marca al menos un hábito');
+                restoreHabits(calSelected, keys);
+            }
+            else if (e.target.closest('#cal-edit')) { calEdit = true; renderCalDetail(); }
             else if (e.target.closest('#cal-edit-cancel')) { calEdit = false; renderCalDetail(); }
             else if (e.target.closest('#cal-edit-apply')) {
                 const keys = [...$('cal-detail').querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);

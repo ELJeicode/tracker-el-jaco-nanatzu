@@ -94,7 +94,10 @@ const SUPABASE_KEY = 'sb_publishable_zZojq41H3J2bzHwPC4Ti9Q_TYbMEAmK';
             if (bonus && out.days[k].complete) out.days[k].bonus = bonus;
             const done = pick(b?.done, l?.done, r?.done);       // qué hábitos se marcaron
             if (Array.isArray(done)) out.days[k].done = done;
-            if (l?.corrected || r?.corrected) out.days[k].corrected = true;
+            if (pick(b?.corrected, l?.corrected, r?.corrected)) out.days[k].corrected = true;
+            const correction = pick(b?.correction, l?.correction, r?.correction);   // para poder deshacer
+            if (correction) out.days[k].correction = correction;
+            if (l?.restored || r?.restored) out.days[k].restored = true;   // la devolución es de una sola vez
         }
 
         if (L.day === R.day) {
