@@ -1745,30 +1745,6 @@
             renderCalendar();
         }
 
-        // Para correcciones hechas antes de existir "deshacer": devuelve la XP de los hábitos elegidos (una vez).
-        function restoreHabits(k, keys) {
-            const rec = state.days[k];
-            if (!rec || !keys.length) return;
-            const list = ROUTINES[routineFor(k)].habits;
-            const max = list.reduce((a, h) => a + h.xp, 0);
-            const chosen = list.filter(h => keys.includes(h.key));
-            const add = Math.min(max - rec.xp, chosen.reduce((a, h) => a + h.xp, 0));
-            if (add <= 0) return toast('Ese día ya tiene la XP máxima');
-            if (!confirm(`¿Devolver estos hábitos al ${shortDate(k)}?\n\n${chosen.map(h => '· ' + h.text).join('\n')}\n\n+${add} XP. Solo se puede hacer una vez en este día.`)) return;
-            rec.xp += add;
-            state.totalXP += add;
-            rec.restored = true;
-            rec.complete = rec.xp >= max;
-            if (rec.complete) settleDayBonus(k, true);
-            for (let d = addDays(k, 1); d <= dayKey(); d = addDays(d, 1)) {
-                if (state.days[d]?.complete) settleDayBonus(d, true);
-            }
-            toast(`↩️ ${shortDate(k)}: +${add} XP devueltos`);
-            calEdit = false;
-            save();
-            renderCalendar();
-        }
-
         function renderCalDetail() {
             const k = calSelected;
             if (!k) { $('cal-detail').innerHTML = 'Toca un día para ver su detalle.'; return; }
@@ -1796,24 +1772,7 @@
             if (d.correction && inWindow && !calEdit) {
                 edit += `<button type="button" class="ghost-btn cal-edit-btn" id="cal-undo">↩️ Deshacer corrección</button> `;
             }
-            // Corrección hecha con la versión anterior (sin copia para deshacer): se permite devolver
-            // hábitos quitados por error UNA sola vez, sin pasar de la XP máxima del día.
-            const legacy = d.corrected && !d.correction && !d.restored && inWindow;
-            if (legacy && calEdit === 'restore') {
-                const room = ROUTINES[routineFor(k)].habits.reduce((a, h) => a + h.xp, 0) - (d.xp || 0);
-                edit = `<div class="cal-edit">
-                    <div class="cal-edit-title">Marca los hábitos que <b>SÍ</b> hiciste y se quitaron por error:</div>
-                    ${ROUTINES[routineFor(k)].habits.map(h => `<label class="cal-check"><input type="checkbox" value="${h.key}"> ${esc(h.text)} <span style="color:var(--emerald)">+${h.xp} XP</span></label>`).join('')}
-                    <div class="cal-edit-note">Solo se puede usar una vez en este día · máximo +${room} XP.</div>
-                    <div class="cal-edit-actions">
-                        <button type="button" class="gold-btn" id="cal-restore-apply">Devolver seleccionados</button>
-                        <button type="button" class="ghost-btn" id="cal-edit-cancel">Cancelar</button>
-                    </div>
-                </div>`;
-            } else if (legacy && !calEdit) {
-                edit += `<button type="button" class="ghost-btn cal-edit-btn" id="cal-restore">↩️ Devolver hábitos quitados por error</button> `;
-            }
-            if (canCorrect(k) && calEdit !== 'restore') {
+            if (canCorrect(k)) {
                 if (!calEdit) {
                     edit += `<button type="button" class="ghost-btn cal-edit-btn" id="cal-edit">✏️ Corregir este día</button>`;
                 } else {
@@ -2192,12 +2151,6 @@
         });
         $('cal-detail').addEventListener('click', e => {
             if (e.target.closest('#cal-undo')) undoCorrection(calSelected);
-            else if (e.target.closest('#cal-restore')) { calEdit = 'restore'; renderCalDetail(); }
-            else if (e.target.closest('#cal-restore-apply')) {
-                const keys = [...$('cal-detail').querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);
-                if (!keys.length) return toast('Marca al menos un hábito');
-                restoreHabits(calSelected, keys);
-            }
             else if (e.target.closest('#cal-edit')) { calEdit = true; renderCalDetail(); }
             else if (e.target.closest('#cal-edit-cancel')) { calEdit = false; renderCalDetail(); }
             else if (e.target.closest('#cal-edit-apply')) {
