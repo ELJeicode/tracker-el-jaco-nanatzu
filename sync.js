@@ -92,6 +92,9 @@ const SUPABASE_KEY = 'sb_publishable_zZojq41H3J2bzHwPC4Ti9Q_TYbMEAmK';
             if (out.days[k].shielded && via) out.days[k].via = via;
             const bonus = pick(b?.bonus, l?.bonus, r?.bonus);   // bono de racha del día
             if (bonus && out.days[k].complete) out.days[k].bonus = bonus;
+            const done = pick(b?.done, l?.done, r?.done);       // qué hábitos se marcaron
+            if (Array.isArray(done)) out.days[k].done = done;
+            if (l?.corrected || r?.corrected) out.days[k].corrected = true;
         }
 
         if (L.day === R.day) {

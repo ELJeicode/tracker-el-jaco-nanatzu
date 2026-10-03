@@ -389,6 +389,15 @@
         .lg-none { background: rgba(0, 0, 0, 0.4); }
         .cal-detail { text-align: left; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); font-size: 13px; color: var(--muted); line-height: 1.55; }
         .cal-detail b { color: var(--text); }
+        .cal-habits { display: inline-block; margin-top: 6px; font-size: 12.5px; }
+        .cal-edit-btn { margin-top: 10px; }
+        .cal-edit { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+        .cal-edit-title { color: var(--text); }
+        .cal-check { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text); font-size: 13px; }
+        .cal-check input { width: 16px; height: 16px; accent-color: var(--crimson-2); }
+        .cal-check span { margin-left: auto; color: var(--crimson-2); font-weight: 700; font-size: 12px; white-space: nowrap; }
+        .cal-edit-note { font-size: 12px; color: var(--muted); font-style: italic; }
+        .cal-edit-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
         @media (max-width: 640px) {
             .cal-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .cal-day .n { font-size: 12px; }
@@ -1307,6 +1316,13 @@
         const isDone = k => !!state.days[k]?.complete;
         const isShielded = k => !!state.days[k]?.shielded && !state.days[k]?.complete;
 
+        // Racha que termina en el día k (incluido, si está completo).
+        function streakAt(k) {
+            let d = k, n = 0;
+            while (isDone(d) || isShielded(d)) { if (isDone(d)) n++; d = addDays(d, -1); }
+            return n;
+        }
+
         function streak() {
             let d = dayKey();
             if (!isDone(d) && !isShielded(d)) d = addDays(d, -1);
@@ -1400,12 +1416,13 @@
                 state.shields = (state.shields || 0) + 1;
                 toast('🛡️ Completaste el día: el escudo vuelve a tu inventario');
             }
+            rec.done = state.habits.filter(x => x.done).map(x => x.key);   // historial: qué se marcó ese día
             if (rec.complete !== wasComplete) settleDayBonus(today);
             save();
         }
 
         // Da (si el día quedó completo) o devuelve (si dejó de estarlo) el bono de racha de ese día.
-        function settleDayBonus(k) {
+        function settleDayBonus(k, quiet = false) {
             const rec = state.days[k];
             if (!rec) return;
             if (rec.bonus) {
@@ -1414,7 +1431,7 @@
                 delete rec.bonus;
             }
             if (!rec.complete) return;
-            const n = streak();
+            const n = streakAt(k);
             const b = streakBonus(n, rec.xp);
             const m = STREAK_MILESTONES.find(x => x.days === n);
             let shield = 0, gold = b.gold;
@@ -1429,15 +1446,15 @@
             if (m) rec.bonus.milestone = n;
             state.totalXP += b.xp;
             state.shields = (state.shields || 0) + shield;
-            toast(`🐉 Bono de racha ×${n}: +${fmtGold(b.gold)} oro · +${b.xp} XP`);
-            if (m) toast(`🏆 ¡Hito de ${n} días! ${m.label}${m.shield && !shield ? ` (inventario lleno: +${SHIELD_FULL_GOLD} oro)` : ''}`);
+            if (!quiet) toast(`🐉 Bono de racha ×${n}: +${fmtGold(b.gold)} oro · +${b.xp} XP`);
+            if (m && !quiet) toast(`🏆 ¡Hito de ${n} días! ${m.label}${m.shield && !shield ? ` (inventario lleno: +${SHIELD_FULL_GOLD} oro)` : ''}`);
         }
 
         function resetDay() {
             if (!confirm('¿Desmarcar todos los hábitos de hoy? Se resta la XP ganada hoy.')) return;
             const today = dayKey();
             state.habits.forEach(h => { if (h.done) state.totalXP = Math.max(0, state.totalXP - h.xp); h.done = false; });
-            state.days[today] = { ...state.days[today], xp: 0, complete: false };
+            state.days[today] = { ...state.days[today], xp: 0, complete: false, done: [] };
             settleDayBonus(today);
             save();
         }
@@ -1664,6 +1681,47 @@
             renderCalDetail();
         }
 
+        // ---------- Corregir un día pasado (solo quitar, nunca agregar) ----------
+        const CORRECT_WINDOW_DAYS = 7;
+        let calEdit = false;
+
+        const canCorrect = k => k < dayKey() && k >= addDays(dayKey(), -CORRECT_WINDOW_DAYS) && (state.days[k]?.xp || 0) > 0;
+
+        // Hábitos que se pueden quitar: los registrados ese día; si el día es anterior al historial,
+        // todos los de su rutina (la XP quitada nunca baja de 0).
+        function correctableHabits(k) {
+            const list = ROUTINES[routineFor(k)].habits;
+            const done = state.days[k]?.done;
+            return Array.isArray(done) ? list.filter(h => done.includes(h.key)) : list;
+        }
+
+        function correctDay(k, keys) {
+            const rec = state.days[k];
+            if (!rec || !keys.length) return;
+            const habits = ROUTINES[routineFor(k)].habits.filter(h => keys.includes(h.key));
+            const remove = Math.min(rec.xp, habits.reduce((a, h) => a + h.xp, 0));
+            const names = habits.map(h => '· ' + h.text).join('\n');
+            if (!confirm(`¿Quitar estos hábitos del ${shortDate(k)}?\n\n${names}\n\n−${remove} XP. El día queda incompleto${rec.bonus ? ' y se devuelve su bono de racha' : ''}.`)) return;
+            if (rec.bonus) {
+                state.totalXP = Math.max(0, state.totalXP - (rec.bonus.xp || 0));
+                if (rec.bonus.shield) state.shields = Math.max(0, (state.shields || 0) - rec.bonus.shield);
+                delete rec.bonus;
+            }
+            rec.xp -= remove;
+            state.totalXP = Math.max(0, state.totalXP - remove);
+            rec.complete = false;
+            if (Array.isArray(rec.done)) rec.done = rec.done.filter(x => !keys.includes(x));
+            rec.corrected = true;
+            // La racha cambió: se recalculan los bonos de los días siguientes que estaban completos.
+            for (let d = addDays(k, 1); d <= dayKey(); d = addDays(d, 1)) {
+                if (state.days[d]?.complete) settleDayBonus(d, true);
+            }
+            toast(`✏️ ${shortDate(k)} corregido: −${remove} XP`);
+            calEdit = false;
+            save();
+            renderCalendar();
+        }
+
         function renderCalDetail() {
             const k = calSelected;
             if (!k) { $('cal-detail').innerHTML = 'Toca un día para ver su detalle.'; return; }
@@ -1680,7 +1738,30 @@
             ];
             if (d.bonus) parts.push(`Bono de racha ×${d.bonus.streak}: <b>+${fmtGold(d.bonus.gold)} oro · +${d.bonus.xp} XP</b>${d.bonus.milestone ? ` · 🏆 Hito de ${d.bonus.milestone} días` : ''}`);
             if (weight) parts.push(`⚖️ Peso: <b>${kgFmt(weight.kg)} kg</b>`);
-            $('cal-detail').innerHTML = parts.join('<br>');
+            if (Array.isArray(d.done)) {
+                const list = ROUTINES[routineFor(k)].habits;
+                parts.push('<span class="cal-habits">' + list.map(h => `${d.done.includes(h.key) ? '✓' : '✗'} ${esc(h.text)}`).join('<br>') + '</span>');
+            }
+            if (d.corrected) parts.push('<i>✏️ Este día fue corregido.</i>');
+
+            let edit = '';
+            if (canCorrect(k)) {
+                if (!calEdit) {
+                    edit = `<button type="button" class="ghost-btn cal-edit-btn" id="cal-edit">✏️ Corregir este día</button>`;
+                } else {
+                    const options = correctableHabits(k);
+                    edit = `<div class="cal-edit">
+                        <div class="cal-edit-title">Marca los hábitos que <b>NO</b> hiciste:</div>
+                        ${options.map(h => `<label class="cal-check"><input type="checkbox" value="${h.key}"> ${esc(h.text)} <span>−${h.xp} XP</span></label>`).join('')}
+                        ${Array.isArray(d.done) ? '' : '<div class="cal-edit-note">Este día es anterior al historial de hábitos: elige con cuidado.</div>'}
+                        <div class="cal-edit-actions">
+                            <button type="button" class="gold-btn" id="cal-edit-apply">Quitar seleccionados</button>
+                            <button type="button" class="ghost-btn" id="cal-edit-cancel">Cancelar</button>
+                        </div>
+                    </div>`;
+                }
+            }
+            $('cal-detail').innerHTML = parts.join('<br>') + (edit ? '<br>' + edit : '');
         }
 
         // Bono de racha: lo que da completar hoy (o lo que ya dio) y el próximo hito.
@@ -2039,7 +2120,17 @@
             const b = e.target.closest('[data-cal]');
             if (!b) return;
             calSelected = b.dataset.cal;
+            calEdit = false;
             renderCalendar();
+        });
+        $('cal-detail').addEventListener('click', e => {
+            if (e.target.closest('#cal-edit')) { calEdit = true; renderCalDetail(); }
+            else if (e.target.closest('#cal-edit-cancel')) { calEdit = false; renderCalDetail(); }
+            else if (e.target.closest('#cal-edit-apply')) {
+                const keys = [...$('cal-detail').querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);
+                if (!keys.length) return toast('Marca al menos un hábito');
+                correctDay(calSelected, keys);
+            }
         });
         $('cal-modal').addEventListener('click', e => { if (e.target === $('cal-modal')) $('cal-modal').classList.remove('show'); });
         document.addEventListener('keydown', e => { if (e.key === 'Escape') $('cal-modal').classList.remove('show'); });
