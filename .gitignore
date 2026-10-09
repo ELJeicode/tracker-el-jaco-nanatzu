@@ -1,3 +1,6 @@
 # Borradores de Gemini y configuración local de Claude (no son parte de la app)
 gemini-code-*
 .claude/
+
+# Respaldos personales del tracker (datos privados)
+mente-inquebrantable-*.json
